@@ -1,9 +1,13 @@
 # main_app/views.py
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from django.http import HttpResponse
+from django.contrib.admin.views.decorators import staff_member_required
 from .models import ContactMessage
 import os
 from django.conf import settings
+import pandas as pd
+from datetime import datetime
 
 def home(request):
     if request.method == 'POST':
@@ -15,7 +19,8 @@ def home(request):
         ContactMessage.objects.create(
             name=name,
             email=email,
-            message=message
+            message=message,
+            ip_address=get_client_ip(request)  # Added IP capture
         )
         
         # Add a success message
@@ -40,7 +45,8 @@ def threesixnine(request):
         ContactMessage.objects.create(
             name=name,
             email=email,
-            message=message
+            message=message,
+            ip_address=get_client_ip(request)  # Added IP capture
         )
         
         # Add a success message
@@ -155,3 +161,42 @@ def threesixninepix(request):
     }
     
     return render(request, 'threesixninepix.html', context)
+
+def get_client_ip(request):
+    """Helper function to get client IP address"""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        ip = x_forwarded_for.split(',')[0]
+    else:
+        ip = request.META.get('REMOTE_ADDR')
+    return ip
+
+@staff_member_required
+def export_messages(request):
+    """Export all contact messages as an Excel file"""
+    # Get all messages from the database
+    all_messages = ContactMessage.objects.all().order_by('-created_at')
+    
+    # Create a DataFrame with the message data
+    data = {
+        'Name': [msg.name for msg in all_messages],
+        'Email': [msg.email for msg in all_messages],
+        'Message': [msg.message for msg in all_messages],
+        'Date Received': [msg.created_at for msg in all_messages],
+        'Read Status': ['Read' if msg.is_read else 'Unread' for msg in all_messages],
+        'IP Address': [msg.ip_address for msg in all_messages],
+    }
+    
+    df = pd.DataFrame(data)
+    
+    # Create a response with the Excel file
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    filename = f"contact_messages_{timestamp}.xlsx"
+    
+    response = HttpResponse(content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+    response['Content-Disposition'] = f'attachment; filename="{filename}"'
+    
+    # Write the DataFrame to Excel
+    df.to_excel(response, index=False, engine='openpyxl')
+    
+    return response
