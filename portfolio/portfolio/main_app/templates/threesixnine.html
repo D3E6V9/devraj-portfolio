@@ -1,0 +1,137 @@
+<!-- main_app/templates/threesixninepix.html -->
+{% extends 'base.html' %}
+{% block body_class %}t369-page{% endblock %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/threesixninepix.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+{% endblock %}
+
+<!-- Fixed header section for threesixninepix.html -->
+{% block header_content %}
+<h1>
+<div class="t369-header-title">ThreeSixNine<span class="t369-underscore">P</span>ix</div>
+</h1>
+<!-- Include the gear navigation from base.html -->
+<div class="gear-nav-container">
+    <div class="gear-icon" id="gearIcon">
+        <i class="fas fa-cog"></i>
+    </div>
+    <nav class="gear-nav-menu" id="gearNavMenu">
+        <ul>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'threesixnine' %}">ThreeSixNine</a></li>
+            <li><a href="{% url 'threesixninepix' %}">ThreeSixNinePix</a></li>
+            <li><a href="{% url 'blog' %}">Blog</a></li>
+        </ul>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="gallery-container t369-page">
+    <h2 class="gallery-title">ThreeSixNine<span class="t369-underscore">P</span>ix</h2>
+    
+    <div class="gallery-description">
+        <p>A collection of visual explorations and creative photography. Click on any image to view it in full screen.</p>
+    </div>
+    
+    <div class="gallery-grid">
+        <!-- Gallery images with bubble shape and hover effects -->
+        <div class="gallery-item" style="--i: 0">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo1.jpg' %}" alt="Creative Vision">
+            </div>
+            <div class="gallery-caption">
+                <h3>Creative Vision</h3>
+                <p>Exploring the boundaries of visual perception and digital aesthetics through innovative compositions.</p>
+            </div>
+        </div>
+        
+        <div class="gallery-item" style="--i: 1">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo2.jpg' %}" alt="Digital Patterns">
+            </div>
+            <div class="gallery-caption">
+                <h3>Digital Patterns</h3>
+                <p>The harmony of technology and design creates mesmerizing visual patterns that captivate the imagination.</p>
+            </div>
+        </div>
+        
+        <div class="gallery-item" style="--i: 2">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo3.jpg' %}" alt="Abstract Thoughts">
+            </div>
+            <div class="gallery-caption">
+                <h3>Abstract Thoughts</h3>
+                <p>Visual representation of complex ideas through the lens of abstract photography and digital manipulation.</p>
+            </div>
+        </div>
+        
+        <div class="gallery-item" style="--i: 3">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo4.jpg' %}" alt="Technological Poetry">
+            </div>
+            <div class="gallery-caption">
+                <h3>Technological Poetry</h3>
+                <p>Where technology meets artistic expression, creating a visual language that speaks to the digital age.</p>
+            </div>
+        </div>
+        
+        <div class="gallery-item" style="--i: 4">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo5.jpg' %}" alt="Future Visions">
+            </div>
+            <div class="gallery-caption">
+                <h3>Future Visions</h3>
+                <p>Glimpses into possibilities ahead through futuristic imagery and forward-thinking visual concepts.</p>
+            </div>
+        </div>
+        
+        <div class="gallery-item" style="--i: 5">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo6.jpg' %}" alt="Digital Dreams">
+            </div>
+            <div class="gallery-caption">
+                <h3>Digital Dreams</h3>
+                <p>Exploring the digital aesthetic landscape where imagination and technology create dreamlike worlds.</p>
+            </div>
+        </div>
+        
+        <!-- Additional grid items to show more examples -->
+        <div class="gallery-item" style="--i: 6">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo7.jpg' %}" alt="Neon Horizons">
+            </div>
+            <div class="gallery-caption">
+                <h3>Neon Horizons</h3>
+                <p>Vibrant color explorations inspired by urban nightscapes and digital culture.</p>
+            </div>
+        </div>
+        
+        <div class="gallery-item" style="--i: 7">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo8.jpg' %}" alt="Quantum Pixels">
+            </div>
+            <div class="gallery-caption">
+                <h3>Quantum Pixels</h3>
+                <p>Breaking down digital imagery to its fundamental elements, exploring the beauty of pixels.</p>
+            </div>
+        </div>
+        
+        <div class="gallery-item" style="--i: 8">
+            <div class="gallery-image-container">
+                <img src="{% static 'images/threesixninepix/photo9.jpg' %}" alt="Cyberspace Echoes">
+            </div>
+            <div class="gallery-caption">
+                <h3>Cyberspace Echoes</h3>
+                <p>Visual representation of digital spaces and the memories they contain.</p>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/threesixninepix.js' %}"></script>
+{% endblock %}

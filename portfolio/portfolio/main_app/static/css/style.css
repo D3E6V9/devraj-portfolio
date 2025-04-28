@@ -1,0 +1,649 @@
+/* main_app/static/css/style.css */
+:root {
+    --cyan: #00b7c2;
+    --bright-cyan: #00FFFF;
+    --dark-cyan: #008b96;
+    --green: #00c291;
+    --blue: #0078c2;
+    --gray: #8a8a8a;
+    --light-gray: #f0f0f0;
+    --white: #ffffff;
+}
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+    font-family: 'Arial', sans-serif;
+}
+
+body {
+    background: var(--white);
+    position: relative;
+    overflow-x: hidden;
+    color: #333;
+}
+
+/* Modifying the edge glow to be more subtle and not create visible borders */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    pointer-events: none;
+    box-shadow: 
+        inset 0 0 150px rgba(0, 183, 194, 0.2),
+        inset 0 0 100px rgba(0, 194, 145, 0.1),
+        inset 0 0 80px rgba(0, 120, 194, 0.05);
+    z-index: -1;
+    animation: glowPulse 8s infinite alternate;
+}
+
+@keyframes glowPulse {
+    0% {
+        box-shadow: 
+            inset 0 0 150px rgba(0, 183, 194, 0.2),
+            inset 0 0 100px rgba(0, 194, 145, 0.1),
+            inset 0 0 80px rgba(0, 120, 194, 0.05);
+    }
+    50% {
+        box-shadow: 
+            inset 0 0 150px rgba(0, 194, 145, 0.2),
+            inset 0 0 100px rgba(0, 120, 194, 0.1),
+            inset 0 0 80px rgba(0, 183, 194, 0.05);
+    }
+    100% {
+        box-shadow: 
+            inset 0 0 150px rgba(0, 120, 194, 0.2),
+            inset 0 0 100px rgba(0, 183, 194, 0.1),
+            inset 0 0 80px rgba(0, 194, 145, 0.05);
+    }
+}
+
+/* Header and Navigation with gear icon */
+.header {
+    padding: 20px 0;
+    position: relative;
+    height: 60px;
+    background-color: transparent;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* Gear Icon Navigation - UPDATED */
+.gear-nav-container {
+    position: fixed;
+    top: 20px;
+    right: 20px;
+    z-index: 1000;
+}
+
+.gear-icon {
+    position: relative;
+    font-size: 28px;
+    color: #00FFFF; /* Bright cyan as requested */
+    cursor: pointer;
+    animation: spin 10s linear infinite;
+    z-index: 1001;
+}
+/* Specific black gear icon for home page */
+.home-page .gear-icon {
+    color: #000000 !important;
+}
+
+/* Keep cyan color for specialized pages */
+.t369-page .gear-icon {
+    color: #00FFFF !important;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.gear-icon:hover {
+    animation-duration: 8s; /* Slightly accelerate on hover */
+}
+
+.gear-nav-menu {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    background-color: #000000; /* Black background */
+    border-radius: 10px;
+    padding: 15px;
+    width: 200px;
+    opacity: 0;
+    visibility: hidden; /* Hidden by default */
+    transform: translateY(-10px);
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.gear-nav-menu.active {
+    opacity: 1;
+    visibility: visible; /* Visible when active */
+    transform: translateY(0);
+}
+
+.gear-nav-menu ul {
+    list-style: none;
+}
+
+.gear-nav-menu ul li {
+    margin-bottom: 10px;
+}
+
+.gear-nav-menu ul li:last-child {
+    margin-bottom: 0;
+}
+
+.gear-nav-menu ul li a {
+    display: block;
+    color: white;
+    text-decoration: none;
+    padding: 8px 12px;
+    border-radius: 5px;
+    transition: all 0.2s ease;
+}
+
+.gear-nav-menu ul li a:hover {
+    background-color: rgba(0, 255, 255, 0.5); /* Transparent cyan on hover */
+}
+
+/* Hero Section */
+.hero-section {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 80px 10%;
+    min-height: 60vh;
+    background-color: transparent;
+}
+
+.welcome-message {
+    flex: 1;
+    padding-right: 50px;
+}
+
+.name {
+    font-size: 48px;
+    margin-bottom: 20px;
+    position: relative;
+}
+
+.d-letter {
+    color: black;
+    font-weight: 700;
+}
+
+.underscore {
+    color: var(--cyan);
+    animation: blink 1s infinite;
+}
+
+@keyframes blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.welcome-message p {
+    font-size: 22px;
+    line-height: 1.6;
+    color: #333;
+}
+
+.profile-photo {
+    flex: 0 0 350px;
+    position: relative;
+}
+
+.profile-photo::before {
+    content: '';
+    position: absolute;
+    top: -20px;
+    left: -20px;
+    right: 20px;
+    bottom: 20px;
+    background-color: rgba(0, 183, 194, 0.1);
+    border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
+    z-index: -1;
+    animation: morph 8s ease-in-out infinite;
+}
+
+@keyframes morph {
+    0%, 100% {
+        border-radius: 38% 62% 63% 37% / 41% 44% 56% 59%;
+    }
+    25% {
+        border-radius: 45% 55% 52% 48% / 56% 48% 52% 44%;
+    }
+    50% {
+        border-radius: 60% 40% 43% 57% / 47% 62% 38% 53%;
+    }
+    75% {
+        border-radius: 35% 65% 70% 30% / 38% 50% 50% 62%;
+    }
+}
+
+.profile-photo img {
+    width: 100%;
+    height: auto;
+    border-radius: 30% 70% 70% 30% / 30% 30% 70% 70%;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Video Section with Overlay Text */
+.video-section {
+    width: 100%;
+    height: 400px;
+    position: relative;
+    overflow: hidden;
+    margin: 50px 0;
+    background-color: transparent;
+}
+
+.video-container {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+}
+
+.video-container::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to right, 
+        rgba(0, 183, 194, 0.2), 
+        rgba(138, 138, 138, 0.1) 40%, 
+        rgba(138, 138, 138, 0.1) 60%, 
+        rgba(0, 183, 194, 0.2));
+    z-index: 1;
+    pointer-events: none;
+}
+
+#background-video {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    filter: grayscale(30%);
+}
+
+/* Overlay text for video section */
+.video-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    padding: 30px;
+}
+
+/* CSS updates for the About Me section in the video overlay */
+.bio-text {
+    /* Remove the dark background */
+    background-color: transparent; /* Was rgba(0, 0, 0, 0.6) */
+    
+    /* Remove box shadow */
+    box-shadow: none; /* Was 0 0 20px rgba(0, 183, 194, 0.3) */
+    
+    /* Extend width to fill the container */
+    max-width: 100%; /* Was 600px */
+    width: 100%;
+    
+    /* Adjust text color for better visibility */
+    color: white;
+    
+    /* Keep padding but adjust for full width */
+    padding: 25px 40px;
+    
+    /* Keep other styles */
+    border-radius: 10px;
+    text-align: center;
+    backdrop-filter: blur(2px); /* Reduced from 5px for subtlety */
+}
+
+/* Make the title more visible */
+.bio-text h2 {
+    font-size: 32px; /* Slightly larger */
+    margin-bottom: 20px;
+    color: var(--bright-cyan); /* Using the brighter cyan for better visibility */
+    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); /* Add subtle text shadow for readability */
+}
+
+/* Improve paragraph readability */
+.bio-text p {
+    font-size: 18px; /* Slightly larger for better readability */
+    line-height: 1.7;
+    margin-bottom: 18px;
+    text-shadow: 0 0 3px rgba(0, 0, 0, 0.7); /* Add text shadow for readability */
+}
+
+/* Enhance the video overlay */
+.video-overlay {
+    /* Existing properties */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    z-index: 2;
+    
+    /* New properties */
+    padding: 20px;
+    background: linear-gradient(to bottom, 
+        rgba(0, 0, 0, 0.3), 
+        rgba(0, 0, 0, 0.2)
+    ); /* Subtle gradient overlay for text readability */
+}
+
+/* Timeline Section with enhanced shadows */
+.timeline-section {
+    padding: 80px 10%;
+    position: relative;
+    background-color: transparent;
+}
+
+.timeline-section h2 {
+    text-align: center;
+    font-size: 36px;
+    margin-bottom: 50px;
+    color: #333;
+}
+
+.timeline {
+    position: relative;
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.timeline::after {
+    content: '';
+    position: absolute;
+    width: 4px;
+    background-color: var(--cyan);
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    margin-left: -2px;
+}
+
+.timeline-item {
+    padding: 10px 40px;
+    position: relative;
+    width: 50%;
+    box-sizing: border-box;
+}
+
+.timeline-item::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    background-color: white;
+    border: 4px solid var(--cyan);
+    border-radius: 50%;
+    top: 15px;
+    z-index: 1;
+}
+
+.left {
+    left: 0;
+}
+
+.right {
+    left: 50%;
+}
+
+.left::after {
+    right: -10px;
+}
+
+.right::after {
+    left: -10px;
+}
+
+.timeline-content {
+    padding: 20px;
+    background-color: white;
+    border-radius: 8px;
+    box-shadow: 
+        0 5px 15px rgba(0, 0, 0, 0.05),
+        0 0 20px rgba(0, 183, 194, 0.2),
+        0 0 30px rgba(138, 138, 138, 0.1);
+    position: relative;
+    z-index: 2;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.timeline-content:hover {
+    transform: translateY(-5px);
+    box-shadow: 
+        0 8px 25px rgba(0, 0, 0, 0.08),
+        0 0 25px rgba(0, 183, 194, 0.3),
+        0 0 40px rgba(138, 138, 138, 0.15);
+}
+
+.timeline-content h3 {
+    color: var(--dark-cyan);
+    margin-bottom: 10px;
+    font-size: 22px;
+}
+
+.timeline-content p {
+    color: #333;
+    line-height: 1.5;
+    font-size: 16px;
+}
+
+/* Contact Section - Removing the visible section border */
+.contact-section {
+    padding: 80px 10%;
+    background-color: transparent;
+    text-align: center;
+    position: relative;
+}
+
+/* Remove the harsh background color transition */
+.contact-section::after {
+    content: none; /* Remove the gradient that was creating a line */
+}
+
+.cta-heading {
+    font-size: 36px;
+    margin-bottom: 40px;
+    color: #333;
+}
+
+.first-letter {
+    color: black;
+    font-weight: 700;
+}
+
+.cta-heading span:not(.first-letter) {
+    color: var(--cyan);
+}
+
+.contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.contact-form input,
+.contact-form textarea {
+    margin-bottom: 15px;
+    padding: 15px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 16px;
+    background-color: rgba(255, 255, 255, 0.8);
+}
+
+.contact-form textarea {
+    min-height: 150px;
+    resize: vertical;
+}
+
+.contact-form button {
+    background-color: var(--dark-cyan);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.contact-form button:hover {
+    background-color: var(--cyan);
+}
+
+/* Footer */
+footer {
+    padding: 40px 0;
+    text-align: center;
+    background-color: transparent;
+}
+
+.social-icons {
+    display: flex;
+    justify-content: center;
+    gap: 20px;
+}
+
+.social-icons a {
+    color: #333;
+    font-size: 24px;
+    transition: color 0.3s ease;
+}
+
+.social-icons a:hover {
+    color: var(--cyan);
+}
+
+/* Coming Soon Pages */
+.coming-soon {
+    text-align: center;
+    padding: 100px 20px;
+    min-height: 60vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background-color: transparent;
+}
+
+.coming-soon h1 {
+    font-size: 48px;
+    margin-bottom: 20px;
+    color: var(--dark-cyan);
+}
+
+.coming-soon p {
+    font-size: 22px;
+    color: #333;
+}
+
+/* Messages styles */
+.messages {
+    padding: 10px;
+    margin: 0 auto;
+    max-width: 800px;
+    text-align: center;
+}
+
+.message {
+    padding: 10px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+    background-color: rgba(0, 183, 194, 0.1);
+    color: #333;
+}
+
+.message.success {
+    background-color: rgba(0, 194, 145, 0.1);
+}
+
+.message.error {
+    background-color: rgba(255, 0, 0, 0.1);
+}
+
+/* Responsive Design */
+@media (max-width: 992px) {
+    .hero-section {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .welcome-message {
+        padding-right: 0;
+        margin-bottom: 40px;
+    }
+    
+    .profile-photo {
+        flex: 0 0 280px;
+    }
+    
+    .timeline-item {
+        width: 100%;
+        padding-left: 70px;
+        padding-right: 25px;
+    }
+    
+    .timeline::after {
+        left: 31px;
+    }
+    
+    .right {
+        left: 0;
+    }
+    
+    .left::after, .right::after {
+        left: 17px;
+    }
+
+    .bio-text {
+        padding: 15px;
+        max-width: 90%;
+    }
+}
+
+@media (max-width: 768px) {
+    .gear-nav-container {
+        right: 20px;
+    
+    }
+    
+    .gear-icon {
+        font-size: 24px;
+    }
+    
+    /* Add home page specific rule inside the media query */
+    body:not(.t369-page) .gear-icon {
+        color: #000000 !important; /* Black color */
+    }
+}

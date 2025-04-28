@@ -1,0 +1,142 @@
+<!-- main_app/templates/base.html -->
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ThreeSixNine</title>
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    {% block extra_css %}{% endblock %}
+    <!-- Global navigation styles -->
+    <style>
+        /* Fixed navigation gear positioning across all pages */
+        .gear-nav-container {
+            position: fixed;
+            top: 15px; /* Reduced from 20px */
+            right: 20px;
+            z-index: 1500;
+        }
+        
+        .gear-icon {
+            position: relative;
+            font-size: 28px;
+            color: #00FFFF; /* Bright cyan */
+            cursor: pointer;
+            animation: spin 10s linear infinite;
+            z-index: 1501;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .gear-nav-menu {
+            position: absolute;
+            top: 40px;
+            right: 0;
+            background-color: #000000;
+            border-radius: 10px;
+            padding: 15px;
+            width: 200px;
+            opacity: 0;
+            visibility: hidden;
+            transform: translateY(-10px);
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+        
+        .gear-nav-menu.active {
+            opacity: 1;
+            visibility: visible;
+            transform: translateY(0);
+        }
+        
+        .gear-nav-menu ul {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+        
+        .gear-nav-menu ul li {
+            margin-bottom: 10px;
+        }
+        
+        .gear-nav-menu ul li:last-child {
+            margin-bottom: 0;
+        }
+        
+        .gear-nav-menu ul li a {
+            display: block;
+            color: white;
+            text-decoration: none;
+            padding: 8px 12px;
+            border-radius: 5px;
+            transition: all 0.2s ease;
+        }
+        
+        .gear-nav-menu ul li a:hover {
+            background-color: rgba(0, 255, 255, 0.5);
+        }
+        
+        /* Hide the ThreeSixNine link */
+        .gear-nav-menu ul li a[href="{% url 'threesixnine' %}"] {
+            display: none;
+        }
+    </style>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+    <header class="header">
+        {% block header_content %}
+        <!-- Gear Icon Navigation -->
+        <div class="gear-nav-container">
+            <div class="gear-icon" id="gearIcon">
+                <i class="fas fa-cog"></i>
+            </div>
+            <nav class="gear-nav-menu" id="gearNavMenu">
+                <ul>
+                    <li><a href="{% url 'home' %}">Home</a></li>
+                    <li><a href="{% url 'threesixnine' %}">ThreeSixNine</a></li>
+                    <li><a href="{% url 'threesixninepix' %}">ThreeSixNinePix</a></li>
+                    <li><a href="{% url 'blog' %}">Blog</a></li>
+                </ul>
+            </nav>
+        </div>
+        {% endblock %}
+    </header>
+
+    <main>
+        {% if messages %}
+        <div class="messages">
+            {% for message in messages %}
+            <div class="message {{ message.tags }}">
+                {{ message }}
+            </div>
+            {% endfor %}
+        </div>
+        {% endif %}
+        
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer>
+        <div class="social-icons">
+            <a href="https://www.facebook.com/Deven092" target="_blank"><i class="fab fa-facebook"></i></a>
+            <a href="https://www.linkedin.com/in/devraj369np/" target="_blank"><i class="fab fa-linkedin"></i></a>
+            <a href="https://www.instagram.com/d_3_e_6_v_9____/" target="_blank"><i class="fab fa-instagram"></i></a>
+            <a href="http://www.youtube.com/@nepa-health" target="_blank"><i class="fab fa-youtube"></i></a>
+            <a href="https://medium.com/" target="_blank"><i class="fab fa-medium"></i></a>
+        </div>
+    </footer>
+<!-- Global navigation script must load first -->
+<script src="{% static 'js/global-nav.js' %}"></script>
+
+<!-- Page-specific scripts -->
+{% block extra_js %}{% endblock %}
+
+<!-- Main.js loads after the page-specific scripts -->
+<script src="{% static 'js/main.js' %}"></script>
+</body>
+</html>

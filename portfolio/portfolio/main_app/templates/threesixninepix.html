@@ -1,0 +1,117 @@
+<!-- main_app/templates/threesixninepix.html -->
+{% extends 'base.html' %}
+{% block body_class %}t369-page{% endblock %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/threesixninepix.css' %}">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@400;700;900&display=swap" rel="stylesheet">
+{% endblock %}
+
+<!-- Fixed header section for threesixninepix.html -->
+{% block header_content %}
+<h1>
+<div class="t369-header-title">ThreeSixNine<span class="t369-underscore">P</span>ix</div>
+</h1>
+<!-- Include the gear navigation from base.html -->
+<div class="gear-nav-container">
+    <div class="gear-icon" id="gearIcon">
+        <i class="fas fa-cog"></i>
+    </div>
+    <nav class="gear-nav-menu" id="gearNavMenu">
+        <ul>
+            <li><a href="{% url 'home' %}">Home</a></li>
+            <li><a href="{% url 'threesixnine' %}">ThreeSixNine</a></li>
+            <li><a href="{% url 'threesixninepix' %}">ThreeSixNinePix</a></li>
+            <li><a href="{% url 'blog' %}">Blog</a></li>
+        </ul>
+    </nav>
+</div>
+{% endblock %}
+{% block content %}
+<div class="gallery-container t369-page">
+    <h2 class="gallery-title">ThreeSixNine<span class="t369-underscore">P</span>ix</h2>
+    
+    <div class="gallery-description">
+        <p>A collection of visual explorations and creative photography. Click on any image to view the gallery.</p>
+    </div>
+    
+    <div class="gallery-grid">
+        {% if gallery_data %}
+            {% for gallery in gallery_data %}
+                <div class="gallery-item" style="--i: {{ gallery.index }}" data-gallery-id="{{ gallery.id }}">
+                    <div class="gallery-image-container">
+                        <img src="{% static gallery.thumbnail %}" alt="{{ gallery.title }}">
+                    </div>
+                    <div class="gallery-caption">
+                        <h3>{{ gallery.title }}</h3>
+                        <p>{{ gallery.description }}</p>
+                    </div>
+                </div>
+            {% endfor %}
+        {% else %}
+            <div class="no-images-message">
+                <p>No images found in the gallery. Please add image folders to the static/images/threesixnine directory.</p>
+            </div>
+            <style>
+                .no-images-message {
+                    grid-column: 1 / -1;
+                    text-align: center;
+                    padding: 40px;
+                    background-color: rgba(0, 0, 0, 0.3);
+                    border-radius: 20px;
+                    margin: 30px 0;
+                }
+                .no-images-message p {
+                    font-size: 1.2rem;
+                    color: var(--light-gray);
+                }
+            </style>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Swipeable gallery fullscreen view -->
+<div class="swipeable-gallery-container">
+    <div class="swipeable-gallery-close">
+        <i class="fas fa-times"></i>
+    </div>
+    
+    <div class="swipeable-gallery-content">
+        <div class="swipeable-gallery-nav prev">
+            <i class="fas fa-chevron-left"></i>
+        </div>
+        
+        <div class="swipeable-gallery-image-container">
+            <img src="" alt="" class="swipeable-gallery-image">
+            <div class="swipeable-gallery-caption">
+                <h3></h3>
+                <p></p>
+            </div>
+        </div>
+        
+        <div class="swipeable-gallery-nav next">
+            <i class="fas fa-chevron-right"></i>
+        </div>
+    </div>
+    
+    <div class="swipeable-gallery-counter">
+        <span class="current">1</span> / <span class="total">10</span>
+    </div>
+</div>
+
+<!-- Hidden gallery data for JavaScript to use -->
+<div id="galleryData" style="display: none;" data-galleries="{{ gallery_data|safe }}">
+    {% for gallery in gallery_data %}
+        <div data-gallery-id="{{ gallery.id }}" data-gallery-title="{{ gallery.title }}">
+            {% for image in gallery.images %}
+                <div data-image-src="{% static image %}" data-image-alt="{{ gallery.title }} Image {{ forloop.counter }}"></div>
+            {% endfor %}
+        </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/threesixninepix.js' %}"></script>
+{% endblock %}

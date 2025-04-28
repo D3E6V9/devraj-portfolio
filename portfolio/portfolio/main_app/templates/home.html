@@ -1,0 +1,79 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block body_class %}home-page{% endblock %}
+
+{% block content %}
+<!-- Your content here -->
+<div class="hero-section">
+    <div class="welcome-message">
+        <h1 class="name"><span class="d-letter">D</span>evraj<span class="underscore">_</span></h1>
+        <p>Welcome to Devraj's digital world. Let's create something awesome together!</p>
+    </div>
+    <div class="profile-photo">
+        <img src="{% static 'images/profile.png' %}" alt="Devraj's Profile">
+    </div>
+</div>
+
+<div class="video-section">
+    <div class="video-container">
+        <video autoplay muted loop id="background-video">
+            <source src="{% static 'videos/background.mp4' %}" type="video/mp4">
+        </video>
+        <div class="video-overlay">
+            <div class="bio-text">
+                <h2>About Me</h2>
+                <p>I am the Founder and Director of Nepa Health Pvt. Ltd. and currently hold the position of Program Officer at Skill Lab Asia. With a background in BBM studies and a strong interest in information technology, I am committed to facilitating connections, empowering youth voices, and transforming innovative ideas into meaningful initiatives. My focus is on promoting entrepreneurship and contributing to a sustainable, progressive future.</p>
+                <!-- <p>Etiam euismod, lectus sit amet tincidunt lacinia, nisi nunc eleifend nunc, id fermentum magna urna vel nunc. Praesent euismod, ipsum vel tincidunt accumsan, justo orci lacinia turpis, vitae sagittis metus lorem eu sem.</p> -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="timeline-section">
+    <h2>My Journey</h2>
+    <div class="timeline">
+        <div class="timeline-item left">
+            <div class="timeline-content">
+                <h3>2024</h3>
+                <p>Started Learning Deep Learning</p>
+            </div>
+        </div>
+        <div class="timeline-item right">
+            <div class="timeline-content">
+                <h3>2023</h3>
+                <p>Started First Job at Skill Lab Asia</p>
+            </div>
+        </div>
+        <div class="timeline-item left">
+            <div class="timeline-content">
+                <h3>2022</h3>
+                <p>Completed Secondary Level Education(+2). Started Nepa Health (My Startup)</p>
+            </div>
+        </div>
+        <div class="timeline-item right">
+            <div class="timeline-content">
+                <h3>2020</h3>
+                <p>Completed SEE. Started learning programming</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="contact-section">
+    <h2 class="cta-heading">
+        <span class="first-letter">L</span>ets 
+        <span class="first-letter">C</span>reate 
+        <span class="first-letter">S</span>omething 
+        <span class="first-letter">A</span>wesome 
+        <span class="first-letter">T</span>ogether
+    </h2>
+    <form class="contact-form" method="POST">
+        {% csrf_token %}
+        <input type="text" name="name" placeholder="Your Name" required>
+        <input type="email" name="email" placeholder="Your Email" required>
+        <textarea name="message" placeholder="Your Message" required></textarea>
+        <button type="submit">Send Message</button>
+    </form>
+</div>
+{% endblock %}

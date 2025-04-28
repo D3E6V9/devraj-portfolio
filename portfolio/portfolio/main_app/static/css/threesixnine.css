@@ -1,0 +1,535 @@
+/* main_app/static/css/threesixnine.css */
+
+:root {
+    --cyan: #00b7c2;
+    --bright-cyan: #00FFFF;
+    --dark-cyan: #008b96;
+    --green: #00c291;
+    --blue: #0078c2;
+    --gray: #8a8a8a;
+    --light-gray: #f0f0f0;
+    --dark-bg: #0d0d0e;
+}
+
+/* Reset default margins and paddings */
+html, body {
+    margin: 0;
+    padding: 0;
+    overflow-x: hidden;
+}
+
+body {
+    background-color: var(--dark-bg);
+}
+
+/* Header styles for ThreeSixNine */
+.header {
+    background-color: rgba(13, 13, 14, 0.95);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: fixed;
+    width: 100%;
+    height: 70px;
+    z-index: 1000;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+}
+
+.t369-header-title {
+    font-family: 'Montserrat', sans-serif;
+    font-size: 2.5rem;
+    font-weight: 900;
+    text-transform: uppercase;
+    color: white;
+    text-shadow: 0 0 5px rgba(0, 183, 194, 0.5);
+    letter-spacing: -1px;
+}
+
+.threesixnine-wrapper {
+    margin: 0;
+    padding: 0;
+    background-color: var(--dark-bg);
+    color: white;
+    min-height: 100vh;
+    font-family: 'Montserrat', sans-serif;
+    position: relative;
+    padding-top: 70px; /* Added to account for fixed header */
+}
+
+/* UPDATED Gear Icon Navigation - Fixed for all pages */
+.gear-nav-container {
+    position: absolute;
+    right: 30px;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 1000;
+}
+
+.gear-icon {
+    position: relative;
+    font-size: 28px;
+    color: var(--bright-cyan);
+    cursor: pointer;
+    animation: spin 10s linear infinite;
+    z-index: 1001;
+}
+
+@keyframes spin {
+    0% {
+        transform: rotate(0deg);
+    }
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.gear-icon:hover {
+    animation-duration: 8s; /* Slightly faster on hover */
+}
+
+.gear-nav-menu {
+    position: absolute;
+    top: 40px;
+    right: 0;
+    background-color: #000000; /* Black background */
+    border-radius: 12px;
+    padding: 15px;
+    width: 200px;
+    transform: translateY(-20px);
+    opacity: 0;
+    visibility: hidden; /* Hide by default */
+    transition: all 0.3s ease;
+    box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
+    z-index: 1000;
+}
+
+.gear-nav-menu.active {
+    transform: translateY(0);
+    opacity: 1;
+    visibility: visible; /* Show when active */
+}
+
+.gear-nav-menu ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.gear-nav-menu ul li {
+    margin-bottom: 10px;
+}
+
+.gear-nav-menu ul li:last-child {
+    margin-bottom: 0;
+}
+
+.gear-nav-menu ul li a {
+    display: block;
+    color: white;
+    font-weight: 500;
+    text-decoration: none;
+    padding: 10px 15px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.gear-nav-menu ul li a:hover {
+    background-color: rgba(0, 255, 255, 0.5); /* Transparent cyan on hover */
+    color: var(--bright-cyan);
+}
+
+/* Main title section */
+.t369-hero-section {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+    overflow: hidden;
+}
+
+.t369-bg-image {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-image: url('../images/threesixnine-bg.jpg');
+    background-size: cover;
+    background-position: center;
+    z-index: 1;
+}
+
+.t369-bg-image::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at center, rgba(18, 18, 18, 0.5) 0%, rgba(18, 18, 18, 0.8) 50%, rgba(18, 18, 18, 1) 100%);
+}
+
+.t369-title-container {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+}
+
+.t369-main-title {
+    font-size: 4.5rem;
+    font-weight: 900;
+    letter-spacing: -2px;
+    margin-bottom: 2rem;
+    text-transform: uppercase;
+    color: white;
+    text-shadow: 0 0 10px rgba(0, 183, 194, 0.5);
+}
+
+.t369-underscore {
+    color: var(--cyan);
+    animation: t369-blink 1s infinite;
+}
+
+@keyframes t369-blink {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0; }
+}
+
+.t369-intro-text {
+    max-width: 600px;
+    margin: 0 auto;
+    background-color: rgba(0, 0, 0, 0.6);
+    padding: 1.5rem;
+    border-radius: 8px;
+    backdrop-filter: blur(5px);
+    line-height: 1.6;
+    font-size: 1.2rem;
+}
+
+/* Bubbles section - removing section borders */
+.t369-bubbles-section {
+    min-height: 100vh;
+    padding: 5rem 2rem;
+    position: relative;
+    background-color: var(--dark-bg); /* Keep consistent background */
+}
+
+.t369-bubbles-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4rem;
+}
+
+.t369-bubble-item {
+    position: relative;
+    border-radius: 20px;
+    overflow: hidden;
+    height: 350px;
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+    cursor: pointer;
+    opacity: 0;
+    transform: translateY(50px);
+    border: none; /* Remove any borders */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+}
+
+.t369-bubble-item:hover {
+    transform: scale(1.05) translateY(-5px);
+    box-shadow: 0 15px 30px rgba(0, 183, 194, 0.2);
+}
+
+.t369-bubble-image {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    z-index: 1;
+}
+
+.t369-bubble-shadow {
+    position: absolute;
+    width: 120%;
+    height: 120%;
+    top: -10%;
+    left: -10%;
+    z-index: 0;
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+    background: radial-gradient(ellipse at center, 
+                rgba(0, 183, 194, 0.4) 0%, 
+                rgba(138, 138, 138, 0.2) 50%, 
+                rgba(0, 0, 0, 0) 70%);
+    filter: blur(20px);
+    animation: t369-moveShadow 8s infinite alternate ease-in-out;
+}
+
+@keyframes t369-moveShadow {
+    0% {
+        border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+        transform: rotate(0deg);
+    }
+    50% {
+        border-radius: 60% 40% 30% 70% / 60% 30% 70% 40%;
+        transform: rotate(5deg);
+    }
+    100% {
+        border-radius: 35% 65% 50% 50% / 40% 60% 40% 60%;
+        transform: rotate(-5deg);
+    }
+}
+
+.t369-bubble-content {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    z-index: 2;
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    padding: 2rem;
+    background: linear-gradient(to top, 
+                rgba(0, 0, 0, 0.9) 0%, 
+                rgba(0, 0, 0, 0.5) 40%, 
+                rgba(0, 0, 0, 0) 100%);
+    transition: background 0.3s ease;
+}
+
+.t369-bubble-title {
+    font-size: 2rem;
+    font-weight: 700;
+    margin-bottom: 0.5rem;
+    color: white;
+}
+
+.t369-bubble-description {
+    font-size: 1rem;
+    color: rgba(255, 255, 255, 0.8);
+    max-width: 80%;
+}
+
+.t369-bubble-1 .t369-bubble-shadow {
+    background: radial-gradient(ellipse at center, 
+                rgba(0, 183, 194, 0.4) 0%, 
+                rgba(138, 138, 138, 0.2) 50%, 
+                rgba(0, 0, 0, 0) 70%);
+    animation-delay: 0s;
+}
+
+.t369-bubble-2 .t369-bubble-shadow {
+    background: radial-gradient(ellipse at center, 
+                rgba(0, 194, 145, 0.4) 0%, 
+                rgba(138, 138, 138, 0.2) 50%, 
+                rgba(0, 0, 0, 0) 70%);
+    animation-delay: -2s;
+}
+
+.t369-bubble-3 .t369-bubble-shadow {
+    background: radial-gradient(ellipse at center, 
+                rgba(0, 120, 194, 0.4) 0%, 
+                rgba(138, 138, 138, 0.2) 50%, 
+                rgba(0, 0, 0, 0) 70%);
+    animation-delay: -4s;
+}
+
+/* Contact section - removing section borders */
+.t369-contact-section {
+    padding: 80px 10%;
+    background-color: var(--dark-bg); /* Keep consistent background */
+    text-align: center;
+}
+
+.t369-cta-heading {
+    font-size: 36px;
+    margin-bottom: 40px;
+    color: white;
+}
+
+.t369-first-letter {
+    color: var(--cyan);
+    font-weight: 700;
+}
+
+.t369-contact-form {
+    max-width: 600px;
+    margin: 0 auto;
+    display: flex;
+    flex-direction: column;
+}
+
+.t369-contact-form input,
+.t369-contact-form textarea {
+    margin-bottom: 15px;
+    padding: 15px;
+    border: none; /* Remove borders */
+    border-radius: 8px;
+    font-size: 16px;
+    background-color: rgba(0, 0, 0, 0.4);
+    color: white;
+    transition: background-color 0.3s ease, box-shadow 0.3s ease;
+    box-shadow: 0 0 0 1px rgba(255, 255, 255, 0.1);
+}
+
+.t369-contact-form textarea {
+    min-height: 150px;
+    resize: vertical;
+}
+
+.t369-contact-form input:focus,
+.t369-contact-form textarea:focus {
+    outline: none;
+    background-color: rgba(0, 0, 0, 0.5);
+    box-shadow: 0 0 0 2px rgba(0, 183, 194, 0.4);
+}
+
+.t369-contact-form button {
+    background-color: var(--dark-cyan);
+    color: white;
+    border: none;
+    padding: 15px;
+    font-size: 18px;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.t369-contact-form button:hover {
+    background-color: var(--cyan);
+}
+
+/* Scroll indicator */
+.t369-scroll-indicator {
+    position: absolute;
+    bottom: 2rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: var(--cyan);
+    font-size: 2rem;
+    animation: t369-bounce 2s infinite;
+    z-index: 3;
+    cursor: pointer;
+}
+
+@keyframes t369-bounce {
+    0%, 20%, 50%, 80%, 100% {
+        transform: translateY(0) translateX(-50%);
+    }
+    40% {
+        transform: translateY(-20px) translateX(-50%);
+    }
+    60% {
+        transform: translateY(-10px) translateX(-50%);
+    }
+}
+
+/* Remove section transition borders */
+.t369-bubbles-section::before,
+.t369-contact-section::before {
+    content: none; /* Remove the gradient that was creating lines */
+}
+
+/* Remove popup headers */
+.t369-popup-header,
+.t369-hover-header {
+    display: none !important;
+}
+
+/* Pulse animation for bubbles */
+.t369-pulse {
+    animation: pulse 0.6s ease-in-out;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.05); }
+    100% { transform: scale(1); }
+}
+
+/* Media queries for header and gear nav */
+@media (max-width: 768px) {
+    .gear-nav-container {
+        right: 20px;
+    }
+    
+    .gear-icon {
+        font-size: 24px;
+    }
+    
+    .t369-header-title {
+        font-size: 2rem;
+    }
+}
+
+/* For larger screens */
+@media (min-width: 768px) {
+    .t369-bubbles-container {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .t369-bubble-1 {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .t369-bubble-2 {
+        grid-column: 2;
+        grid-row: 2;
+    }
+    
+    .t369-bubble-3 {
+        grid-column: 1;
+        grid-row: 3;
+    }
+}
+
+@media (min-width: 1200px) {
+    .t369-main-title {
+        font-size: 6rem;
+    }
+    
+    .t369-bubbles-container { 
+        grid-template-columns: repeat(3, 1fr);
+    }
+    
+    .t369-bubble-1 {
+        grid-column: 1;
+        grid-row: 1;
+    }
+    
+    .t369-bubble-2 {
+        grid-column: 3;
+        grid-row: 1;
+    }
+    
+    .t369-bubble-3 {
+        grid-column: 2;
+        grid-row: 2;
+        margin-top: -50px;
+    }
+}
+
+/* Letter color styles */
+.t369-letter-t, .t369-letter-s, .t369-letter-n {
+    color: var(--cyan);
+}
+
+.t369-underscore {
+    color: var(--cyan);
+    animation: t369-blink 1s infinite;
+}
+/* Gear position adjustment */
+.gear-nav-container {
+    top: 35px !important; /* Moved down from the default */
+}
+/* Add this to threesixnine.css */
+.t369-header-title {
+    text-transform: none !important; /* Override any uppercase transformation */
+}
+/* Cyan letter styling */
+.t369-letter-cyan {
+    color: #00FFFF; /* Bright cyan color */
+}
