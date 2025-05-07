@@ -247,7 +247,7 @@ body::before {
     position: relative;
     overflow: hidden;
     margin: 50px 0;
-    background-color: transparent;
+    background-color: #000; /* Black background before video loads */
 }
 
 .video-container {
@@ -274,11 +274,44 @@ body::before {
     pointer-events: none;
 }
 
+/* Local Video Background */
 #background-video {
-    width: 100%;
-    height: 100%;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    min-width: 100%;
+    min-height: 100%;
+    width: auto;
+    height: auto;
+    z-index: 0;
     object-fit: cover;
     filter: grayscale(30%);
+}
+
+/* Optional play button for browsers that block autoplay */
+.video-play-button {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 10;
+    background: rgba(0, 183, 194, 0.7);
+    border: none;
+    color: white;
+    font-size: 24px;
+    width: 60px;
+    height: 60px;
+    border-radius: 50%;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.3s ease;
+}
+
+.video-play-button:hover {
+    background: rgba(0, 183, 194, 1);
 }
 
 /* Overlay text for video section */
@@ -293,7 +326,12 @@ body::before {
     justify-content: center;
     align-items: center;
     z-index: 2;
-    padding: 30px;
+    padding: 20px;
+    background: linear-gradient(
+        to bottom,
+        rgba(0, 0, 0, 0.6), 
+        rgba(0, 0, 0, 0.4)
+    ); /* Darker gradient for better text visibility */
 }
 
 /* CSS updates for the About Me section in the video overlay */
@@ -305,19 +343,18 @@ body::before {
     box-shadow: none; /* Was 0 0 20px rgba(0, 183, 194, 0.3) */
     
     /* Extend width to fill the container */
-    max-width: 100%; /* Was 600px */
+    max-width: 80%; /* Was 600px */
     width: 100%;
     
     /* Adjust text color for better visibility */
     color: white;
     
     /* Keep padding but adjust for full width */
-    padding: 25px 40px;
+    padding: 25px;
     
     /* Keep other styles */
-    border-radius: 10px;
     text-align: center;
-    backdrop-filter: blur(2px); /* Reduced from 5px for subtlety */
+    z-index: 3;
 }
 
 /* Make the title more visible */
@@ -325,7 +362,7 @@ body::before {
     font-size: 32px; /* Slightly larger */
     margin-bottom: 20px;
     color: var(--bright-cyan); /* Using the brighter cyan for better visibility */
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); /* Add subtle text shadow for readability */
+    text-shadow: 0 0 10px rgba(0, 0, 0, 0.7); /* Add subtle text shadow for readability */
 }
 
 /* Improve paragraph readability */
@@ -333,29 +370,7 @@ body::before {
     font-size: 18px; /* Slightly larger for better readability */
     line-height: 1.7;
     margin-bottom: 18px;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.7); /* Add text shadow for readability */
-}
-
-/* Enhance the video overlay */
-.video-overlay {
-    /* Existing properties */
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-    
-    /* New properties */
-    padding: 20px;
-    background: linear-gradient(to bottom, 
-        rgba(0, 0, 0, 0.3), 
-        rgba(0, 0, 0, 0.2)
-    ); /* Subtle gradient overlay for text readability */
+    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9); /* Add text shadow for readability */
 }
 
 /* Timeline Section with enhanced shadows */
@@ -646,98 +661,4 @@ footer {
     body:not(.t369-page) .gear-icon {
         color: #000000 !important; /* Black color */
     }
-}
-
-/* YouTube Container Styles */
-.youtube-container {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    overflow: hidden;
-    pointer-events: none; /* Make video non-interactive */
-    background-color: #000; /* Black background for any gaps */
-}
-
-.youtube-container iframe {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    min-width: 100%;
-    min-height: 100%;
-    width: auto;
-    height: auto;
-}
-
-/* Override any previous media queries that might interfere */
-@media (min-aspect-ratio: 16/9) {
-    .youtube-container iframe {
-        /* Make sure the iframe is larger than the container to fill it completely */
-        width: 120%;
-        height: calc(120% * 9/16);
-    }
-}
-
-@media (max-aspect-ratio: 16/9) {
-    .youtube-container iframe {
-        /* Make sure the iframe is larger than the container to fill it completely */
-        height: 120%;
-        width: calc(120% * 16/9);
-    }
-}
-
-
-/* Enhanced video section */
-.video-section {
-    width: 100%;
-    height: 400px;
-    position: relative;
-    overflow: hidden;
-    margin: 50px 0;
-    background-color: #000; /* Black background before video loads */
-}
-
-/* Improved video overlay */
-.video-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
-    z-index: 2;
-    padding: 20px;
-    background: linear-gradient(
-        to bottom,
-        rgba(0, 0, 0, 0.6), 
-        rgba(0, 0, 0, 0.4)
-    ); /* Darker gradient for better text visibility */
-}
-
-/* Make the bio text more visible */
-.bio-text {
-    max-width: 80%;
-    color: white;
-    padding: 25px;
-    text-align: center;
-    z-index: 3;
-}
-
-.bio-text h2 {
-    font-size: 32px;
-    margin-bottom: 20px;
-    color: var(--bright-cyan);
-    text-shadow: 0 0 10px rgba(0, 0, 0, 0.7); /* Stronger text shadow */
-}
-
-.bio-text p {
-    font-size: 18px;
-    line-height: 1.7;
-    margin-bottom: 18px;
-    text-shadow: 0 0 8px rgba(0, 0, 0, 0.9); /* Stronger text shadow */
 }
