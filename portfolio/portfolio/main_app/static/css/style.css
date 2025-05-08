@@ -240,14 +240,29 @@ body::before {
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
-/* Video Section with Overlay Text */
 .video-section {
-    width: 100%;
-    height: 400px;
+    width: 92%; /* Slightly increased from 90% */
+    height: 450px; /* Square-like proportion */
     position: relative;
     overflow: hidden;
-    margin: 50px 0;
+    margin: 50px auto; /* Center it */
     background-color: transparent;
+    border-radius: 0; /* Removed rounded corners */
+    box-shadow: none; /* Removed defined shadow */
+    
+    /* Add dissolving effect to blend with the background */
+    -webkit-mask-image: linear-gradient(to right, 
+        transparent 0%, 
+        rgba(0, 0, 0, 1) 5%, 
+        rgba(0, 0, 0, 1) 95%, 
+        transparent 100%
+    );
+    mask-image: linear-gradient(to right, 
+        transparent 0%, 
+        rgba(0, 0, 0, 1) 5%, 
+        rgba(0, 0, 0, 1) 95%, 
+        transparent 100%
+    );
 }
 
 .video-container {
@@ -266,19 +281,34 @@ body::before {
     right: 0;
     bottom: 0;
     background: linear-gradient(to right, 
-        rgba(0, 183, 194, 0.2), 
-        rgba(138, 138, 138, 0.1) 40%, 
-        rgba(138, 138, 138, 0.1) 60%, 
-        rgba(0, 183, 194, 0.2));
+        rgba(0, 183, 194, 0.1), /* Further reduced opacity */
+        rgba(138, 138, 138, 0.03) 40%, /* Further reduced opacity */
+        rgba(138, 138, 138, 0.03) 60%, /* Further reduced opacity */
+        rgba(0, 183, 194, 0.1)); /* Further reduced opacity */
     z-index: 1;
     pointer-events: none;
+    
+    /* Add vertical gradient to dissolve top and bottom edges */
+    -webkit-mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        rgba(0, 0, 0, 1) 5%, 
+        rgba(0, 0, 0, 1) 95%, 
+        transparent 100%
+    );
+    mask-image: linear-gradient(to bottom, 
+        transparent 0%, 
+        rgba(0, 0, 0, 1) 5%, 
+        rgba(0, 0, 0, 1) 95%, 
+        transparent 100%
+    );
 }
+
 
 #background-video {
     width: 100%;
     height: 100%;
     object-fit: cover;
-    filter: grayscale(30%);
+    filter: grayscale(20%); /* Reduced from 30% for better visibility */
 }
 
 /* Overlay text for video section */
@@ -298,47 +328,27 @@ body::before {
 
 /* CSS updates for the About Me section in the video overlay */
 .bio-text {
-    /* Remove the dark background */
-    background-color: transparent; /* Was rgba(0, 0, 0, 0.6) */
-    
-    /* Remove box shadow */
-    box-shadow: none; /* Was 0 0 20px rgba(0, 183, 194, 0.3) */
-    
-    /* Extend width to fill the container */
-    max-width: 100%; /* Was 600px */
+    background-color: transparent;
+    box-shadow: none; /* Removed box shadow completely */
+    max-width: 80%; /* Reduced from 100% to prevent text from extending to edges */
     width: 100%;
-    
-    /* Adjust text color for better visibility */
     color: white;
-    
-    /* Keep padding but adjust for full width */
     padding: 25px 40px;
-    
-    /* Keep other styles */
     border-radius: 10px;
     text-align: center;
-    backdrop-filter: blur(2px); /* Reduced from 5px for subtlety */
 }
 
-/* Make the title more visible */
-.bio-text h2 {
-    font-size: 32px; /* Slightly larger */
-    margin-bottom: 20px;
-    color: var(--bright-cyan); /* Using the brighter cyan for better visibility */
-    text-shadow: 0 0 5px rgba(0, 0, 0, 0.5); /* Add subtle text shadow for readability */
-}
 
 /* Improve paragraph readability */
 .bio-text p {
-    font-size: 18px; /* Slightly larger for better readability */
+    font-size: 18px;
     line-height: 1.7;
     margin-bottom: 18px;
-    text-shadow: 0 0 3px rgba(0, 0, 0, 0.7); /* Add text shadow for readability */
+    text-shadow: 0 2px 8px rgba(0, 0, 0, 0.9); /* Enhanced text shadow for readability */
+    font-weight: 400; /* Added for better readability on video */
 }
-
-/* Enhance the video overlay */
+/* Enhanced video overlay for better text visibility with dissolving edges */
 .video-overlay {
-    /* Existing properties */
     position: absolute;
     top: 0;
     left: 0;
@@ -349,15 +359,17 @@ body::before {
     justify-content: center;
     align-items: center;
     z-index: 2;
-    
-    /* New properties */
     padding: 20px;
-    background: linear-gradient(to bottom, 
-        rgba(0, 0, 0, 0.3), 
-        rgba(0, 0, 0, 0.2)
-    ); /* Subtle gradient overlay for text readability */
+    
+    /* Semi-transparent gradient that fades out at edges for text readability */
+    background: radial-gradient(
+        ellipse at center,
+        rgba(0, 0, 0, 0.5) 0%,
+        rgba(0, 0, 0, 0.4) 50%,
+        rgba(0, 0, 0, 0.3) 75%,
+        rgba(0, 0, 0, 0.1) 100%
+    );
 }
-
 /* Timeline Section with enhanced shadows */
 .timeline-section {
     padding: 80px 10%;
@@ -646,4 +658,61 @@ footer {
     body:not(.t369-page) .gear-icon {
         color: #000000 !important; /* Black color */
     }
+}
+
+/* Responsive adjustments */
+@media (max-width: 992px) {
+    .video-section {
+        width: 96%;
+        height: 400px;
+    }
+    
+    .bio-text {
+        padding: 15px;
+        max-width: 90%;
+    }
+    
+    /* Adjust the dissolving effect on medium screens */
+    .video-section {
+        -webkit-mask-image: linear-gradient(to right, 
+            transparent 0%, 
+            rgba(0, 0, 0, 1) 3%, 
+            rgba(0, 0, 0, 1) 97%, 
+            transparent 100%
+        );
+        mask-image: linear-gradient(to right, 
+            transparent 0%, 
+            rgba(0, 0, 0, 1) 3%, 
+            rgba(0, 0, 0, 1) 97%, 
+            transparent 100%
+        );
+    }
+}
+
+@media (max-width: 768px) {
+    .video-section {
+        width: 100%;
+        height: 350px;
+        /* Full width with subtle fade on mobile */
+        -webkit-mask-image: linear-gradient(to right, 
+            transparent 0%, 
+            rgba(0, 0, 0, 1) 1%, 
+            rgba(0, 0, 0, 1) 99%, 
+            transparent 100%
+        );
+        mask-image: linear-gradient(to right, 
+            transparent 0%, 
+            rgba(0, 0, 0, 1) 1%, 
+            rgba(0, 0, 0, 1) 99%, 
+            transparent 100%
+        );
+    }
+}
+
+/* Make the title more visible */
+.bio-text h2 {
+    font-size: 36px; /* Slightly increased from 32px */
+    margin-bottom: 20px;
+    color: var(--bright-cyan);
+    text-shadow: 0 2px 10px rgba(0, 0, 0, 0.8); /* Enhanced text shadow for readability */
 }
