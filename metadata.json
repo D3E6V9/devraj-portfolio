@@ -1,0 +1,6 @@
+{
+  "name": "Nepa Health",
+  "description": "Nepal's first holistic mental health platform offering online therapy, home health services, corporate wellness, and student programs.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

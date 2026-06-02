@@ -1,5 +1,8 @@
-venv/
-*.pyc
-__pycache__/
-db.sqlite3
-.env
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example

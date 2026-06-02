@@ -1,0 +1,49 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-primary: #3D7A5F;
+  --color-secondary: #F5EFE6;
+  --color-accent: #E8916A;
+  --color-dark: #1C2B2B;
+  --color-muted: #6B7C7C;
+  --color-bggray: #FAFAF7;
+  
+  --font-serif: "Playfair Display", Georgia, serif;
+  --font-sans: "Inter", system-ui, sans-serif;
+}
+
+/* Custom Utilities or Global Styles */
+@layer base {
+  body {
+    background-color: var(--color-bggray);
+    color: var(--color-dark);
+    font-family: var(--font-sans);
+    scroll-behavior: smooth;
+  }
+}
+
+/* Custom animations for background blobs */
+@keyframes blob-drift {
+  0% {
+    transform: translate(0px, 0px) scale(1);
+  }
+  33% {
+    transform: translate(30px, -50px) scale(1.15);
+  }
+  66% {
+    transform: translate(-20px, 20px) scale(0.9);
+  }
+  100% {
+    transform: translate(0px, 0px) scale(1);
+  }
+}
+
+.animate-blob {
+  animation: blob-drift 10s infinite alternate ease-in-out;
+}
+
+.animate-blob-delayed {
+  animation: blob-drift 14s infinite alternate-reverse ease-in-out;
+}
+
