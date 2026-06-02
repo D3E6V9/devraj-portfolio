@@ -2,6 +2,7 @@ services:
   - type: web
     name: nepa-health-web
     env: node
+    root: .
     branch: main
     plan: starter
     buildCommand: npm install && npm run build
