@@ -90,7 +90,13 @@ ${recommendationText}
 Choose the most relevant products by ID based on score severity and user care needs. If no product is appropriate, return an empty array for selected_product_ids. Keep the summary bullets action-focused and supportive. If severity is moderate or higher, include one bullet that explicitly advises consulting a healthcare professional or counselor.`;
 };
 
-const parseAiSummaryResponse = (text: string) => {
+interface AiSummaryResult {
+  summaryBullets: string[];
+  productTags: string[];
+  selectedProductIds: string[];
+}
+
+const parseAiSummaryResponse = (text: string): AiSummaryResult => {
   const trimmed = text.trim();
   let payload: any = null;
 
@@ -138,16 +144,20 @@ const parseAiSummaryResponse = (text: string) => {
     }
   });
 
+  const productTags: string[] = Array.isArray(payload?.product_tags)
+    ? Array.from(new Set((payload.product_tags as unknown[]).map((tag) => String(tag))))
+    : Array.from(fallbackTags);
+
+  const selectedProductIds: string[] = Array.isArray(payload?.selected_product_ids)
+    ? Array.from(new Set((payload.selected_product_ids as unknown[]).map((id) => String(id))))
+    : [];
+
   return {
     summaryBullets: Array.isArray(payload?.summary_bullets)
-      ? payload.summary_bullets.map(String).slice(0, 3)
+      ? payload.summary_bullets.map((bullet: unknown) => String(bullet)).slice(0, 3)
       : fallbackBullets,
-    productTags: Array.isArray(payload?.product_tags)
-      ? Array.from(new Set(payload.product_tags.map(String))).slice(0, 4)
-      : Array.from(fallbackTags).slice(0, 4),
-    selectedProductIds: Array.isArray(payload?.selected_product_ids)
-      ? Array.from(new Set(payload.selected_product_ids.map(String))).slice(0, 3)
-      : []
+    productTags: productTags.slice(0, 4),
+    selectedProductIds: selectedProductIds.slice(0, 3)
   };
 };
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Menu, X, Shield } from 'lucide-react';
+import { Menu, X, Leaf, Shield } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import logoImage from '../assets/lets_use_it.svg';
 
@@ -92,7 +92,6 @@ export default function Navbar({ currentPath, onNavigate }: NavbarProps) {
                       : 'text-muted hover:text-primary hover:bg-neutral-100'
                   }`}
                 >
-                  {link.icon && <link.icon className="w-4 h-4 mr-1 text-primary/75" />}
                   <span>{link.name}</span>
                 </button>
               );
@@ -172,7 +171,6 @@ export default function Navbar({ currentPath, onNavigate }: NavbarProps) {
                             : 'text-muted hover:text-primary hover:bg-primary/5'
                         }`}
                       >
-                        {link.icon && <link.icon className="w-4 h-4 text-primary" />}
                         <span>{link.name}</span>
                       </button>
                     );
