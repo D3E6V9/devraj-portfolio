@@ -103,6 +103,17 @@ paths:
         '401': { description: Not signed in }
         '404': { description: Course not found }
         '409': { description: Course already has chapters }
+  /admin/courses/{id}/publish-curriculum:
+    post:
+      summary: Mark every chapter, topic, and resource in a course as published
+      description: Requires at least one chapter, at least one topic in each chapter, and at least one resource in each topic. The course remains a draft.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Published curriculum item counts }
+        '401': { description: Not signed in }
+        '404': { description: Course not found }
+        '422': { description: Outline is missing chapters, topics, or resources }
   /health:
     get:
       summary: Check API and database health

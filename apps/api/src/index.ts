@@ -183,6 +183,23 @@ api.get("/admin/courses/:id", requireAdmin, async (req, res, next) => {
     res.json(course);
   } catch (e) { next(e); }
 });
+api.post("/admin/courses/:id/publish-curriculum", requireAdmin, async (req, res, next) => {
+  try {
+    const courseId = String(req.params.id);
+    const result = await db.$transaction(async tx => {
+      const course = await tx.course.findUnique({ where: { id: courseId }, select: { id: true, chapters: { select: { topics: { select: { resources: { select: { id: true } } } } } } } });
+      if (!course) return { kind: "not-found" as const };
+      if (!course.chapters.length || course.chapters.some(chapter => !chapter.topics.length || chapter.topics.some(topic => !topic.resources.length))) return { kind: "incomplete" as const };
+      await tx.chapter.updateMany({ where: { courseId }, data: { status: "PUBLISHED" } });
+      await tx.topic.updateMany({ where: { chapter: { courseId } }, data: { status: "PUBLISHED" } });
+      await tx.learningResource.updateMany({ where: { topic: { chapter: { courseId } } }, data: { status: "PUBLISHED" } });
+      return { kind: "published" as const, chapterCount: course.chapters.length, topicCount: course.chapters.reduce((sum, chapter) => sum + chapter.topics.length, 0), resourceCount: course.chapters.reduce((sum, chapter) => sum + chapter.topics.reduce((topicSum, topic) => topicSum + topic.resources.length, 0), 0) };
+    });
+    if (result.kind === "not-found") return res.status(404).json({ error: "Course not found" });
+    if (result.kind === "incomplete") return res.status(422).json({ error: "Add at least one topic to every chapter and one learning link/resource to every topic before publishing the curriculum." });
+    res.json({ chapterCount: result.chapterCount, topicCount: result.topicCount, resourceCount: result.resourceCount });
+  } catch (e) { next(e); }
+});
 api.post("/admin/courses", requireAdmin, async (req, res, next) => {
   try {
     const input = courseFields.parse(req.body);

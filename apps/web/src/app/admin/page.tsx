@@ -186,6 +186,15 @@ export default function AdminPage() {
     } catch (e) { setError(e instanceof Error ? e.message : "Could not change course status."); }
     finally { setBusy(false); }
   }
+  async function publishCurriculum() {
+    if (!selected) return; setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await request<{ chapterCount: number; topicCount: number; resourceCount: number }>(`/admin/courses/${selected.id}/publish-curriculum`, { method: "POST" });
+      setNotice(`Marked ${result.chapterCount} chapters, ${result.topicCount} topics, and ${result.resourceCount} learning links as published. The course is still a draft; click “Publish course” when ready.`);
+      await loadCourse(selected.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not publish curriculum items."); }
+    finally { setBusy(false); }
+  }
   async function saveChapter(event: FormEvent) {
     event.preventDefault(); if (!selected || !chapterEditor) return; setBusy(true); setError("");
     try {
@@ -328,7 +337,7 @@ export default function AdminPage() {
           </article>)}
         </div> : !courseEditor && <div className="notice" style={{ marginTop: 20 }}>No courses yet. Start by creating a course draft.</div>}
       </> : <>
-        <div style={{ ...actionRow, margin: "20px 0" }}><button className="btn" onClick={() => { setSelected(null); setCourseEditor(null); setChapterEditor(null); setTopicEditor(null); setResourceEditor(null); setError(""); setNotice(""); void loadOverview(); }}>← All courses</button><span className="pill">{selected.status === "PUBLISHED" ? "Published" : "Draft"}</span><span className="muted">{selected.viewCount.toLocaleString()} views · {selected.likeCount.toLocaleString()} likes</span><button className="btn" onClick={() => { setCourseDraft(fromCourse(selected)); setCourseEditor(courseEditor === "edit" ? null : "edit"); }}>Edit course details</button><button className="btn btn-primary" disabled={busy} onClick={() => void changeCourseStatus()}>{selected.status === "PUBLISHED" ? "Move to drafts" : "Publish course"}</button><button className="btn" onClick={() => void remove(`/admin/courses/${selected.id}`, "course")}>Delete course</button></div>
+        <div style={{ ...actionRow, margin: "20px 0" }}><button className="btn" onClick={() => { setSelected(null); setCourseEditor(null); setChapterEditor(null); setTopicEditor(null); setResourceEditor(null); setError(""); setNotice(""); void loadOverview(); }}>← All courses</button><span className="pill">{selected.status === "PUBLISHED" ? "Published" : "Draft"}</span><span className="muted">{selected.viewCount.toLocaleString()} views · {selected.likeCount.toLocaleString()} likes</span><button className="btn" onClick={() => { setCourseDraft(fromCourse(selected)); setCourseEditor(courseEditor === "edit" ? null : "edit"); }}>Edit course details</button>{selected.status === "DRAFT" && selected.chapters?.length ? <button className="btn" disabled={busy} onClick={() => void publishCurriculum()}>Mark curriculum published</button> : null}<button className="btn btn-primary" disabled={busy} onClick={() => void changeCourseStatus()}>{selected.status === "PUBLISHED" ? "Move to drafts" : "Publish course"}</button><button className="btn" onClick={() => void remove(`/admin/courses/${selected.id}`, "course")}>Delete course</button></div>
         {courseEditor === "edit" && <section style={cardStyle}><h3 style={{ marginTop: 0 }}>Edit course details</h3><form onSubmit={saveCourse}><div style={formGrid}>
           {field("Course title", courseDraft.title, (v) => setCourseDraft({ ...courseDraft, title: v }), { required: true, minLength: 2, maxLength: 120 })}
           {field("Short name / URL", courseDraft.slug, (v) => setCourseDraft({ ...courseDraft, slug: slugify(v) }), { required: true, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" })}
