@@ -14,8 +14,8 @@ async function main() {
     if (password.length < 14) throw new Error("ADMIN_BOOTSTRAP_PASSWORD must be at least 14 characters.");
     const salt = randomBytes(16).toString("hex");
     const passwordHash = `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
-    await prisma.adminUser.upsert({ where: { email }, update: {}, create: { email, passwordHash } });
-    console.log(`Administrator ${email} is initialized (existing passwords are preserved).`);
+    await prisma.adminUser.upsert({ where: { email }, update: { passwordHash }, create: { email, passwordHash } });
+    console.log(`Administrator ${email} is initialized or updated.`);
   } else {
     console.log("No administrator created; set ADMIN_BOOTSTRAP_EMAIL and ADMIN_BOOTSTRAP_PASSWORD before seeding to create one.");
   }

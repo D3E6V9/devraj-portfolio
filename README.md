@@ -28,7 +28,7 @@ The supplied HTML has demonstration-only course data and placeholder resources. 
 2. Install packages with `npm install`.
 3. Generate Prisma Client with `npm run db:generate`.
 4. Apply the schema with `npm run db:migrate`.
-5. Set `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD` (at least 14 characters), and a random `SESSION_SECRET` (at least 32 characters) in `.env`; initialize site settings and the first admin with `npm run db:seed`. Keep bootstrap credentials private and remove them from runtime configuration after the first seed.
+5. Set `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD` (at least 14 characters), and a random `SESSION_SECRET` (at least 32 characters) in `.env`; initialize site settings and the admin with `npm run db:seed`. Seeding creates the admin or resets its password to the configured bootstrap password, so remove bootstrap credentials from runtime configuration after seeding.
 6. Start frontend and API with `npm run dev`.
 
 The site runs at `http://localhost:3000`, and the API is at `http://localhost:4000/api/v1`. Admin sign-in is at `/admin`. `NEXT_PUBLIC_API_BASE_URL` is browser-visible configuration and must contain only the public API base URL. Database credentials, bootstrap credentials, and session secrets must remain server-side.
