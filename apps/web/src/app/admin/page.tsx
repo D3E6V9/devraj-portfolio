@@ -66,7 +66,8 @@ async function parseWordOutline(file: File): Promise<OutlineChapter[]> {
     const chapterName = value(chapterColumn) || lastChapter;
     const topicName = value(topicColumn);
     const linkCell = linkColumn < 0 ? undefined : row[linkColumn];
-    const link = linkCell?.link || linkCell?.text || "";
+    const linkValue = linkCell?.link || linkCell?.text || "";
+    const link = linkCell?.link || linkValue.match(/https?:\/\/[^\s<>"']+/i)?.[0]?.replace(/[),.;]+$/, "") || "";
     if (!chapterName && !topicName && !link) continue;
     if (chapterName) lastChapter = chapterName;
     if (!topicName || !link || !lastChapter) throw new Error(`A table row is missing its chapter, topic, or link: ${row.map(cell => cell.text).filter(Boolean).join(" · ")}`);
