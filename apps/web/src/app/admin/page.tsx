@@ -2,6 +2,7 @@
 
 import { FormEvent, InputHTMLAttributes, useEffect, useState } from "react";
 import Link from "next/link";
+import mammoth from "mammoth";
 
 const api = "/api/v1";
 type Status = "DRAFT" | "PUBLISHED";
@@ -42,7 +43,6 @@ function youtubeId(value: string) {
   return null;
 }
 async function parseWordOutline(file: File): Promise<OutlineChapter[]> {
-  const mammoth = await import("mammoth/mammoth.browser");
   const { value: html } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
   const document = new DOMParser().parseFromString(html, "text/html");
   const table = document.querySelector("table");

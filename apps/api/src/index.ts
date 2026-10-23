@@ -209,9 +209,9 @@ api.post("/admin/courses/:id/import-outline", requireAdmin, async (req, res, nex
     const totals = input.chapters.reduce((sum, chapter) => chapter.topics.reduce((topicSum, topic) => topic.resources.reduce((resourceSum, resource) => resourceSum + (resource.durationSeconds ?? 0), topicSum), sum), 0);
     const result = await db.$transaction(async tx => {
       const course = await tx.course.findUnique({ where: { id: courseId }, select: { id: true } });
-      if (!course) return { error: "Course not found", status: 404 as const };
+      if (!course) return { kind: "not-found" as const };
       const existing = await tx.chapter.count({ where: { courseId } });
-      if (existing) return { error: "This course already has chapters. Import into a new course draft to avoid duplicate curriculum.", status: 409 as const };
+      if (existing) return { kind: "already-has-chapters" as const };
       let topicCount = 0;
       let resourceCount = 0;
       for (const [chapterIndex, chapter] of input.chapters.entries()) {
@@ -222,10 +222,11 @@ api.post("/admin/courses/:id/import-outline", requireAdmin, async (req, res, nex
         }) } } });
       }
       await tx.course.update({ where: { id: courseId }, data: { estimatedMinutes: Math.ceil(totals / 60), status: "DRAFT", publishedAt: null } });
-      return { chapterCount: input.chapters.length, topicCount, resourceCount };
+      return { kind: "imported" as const, chapterCount: input.chapters.length, topicCount, resourceCount };
     });
-    if ("error" in result) return res.status(result.status).json({ error: result.error });
-    res.status(201).json(result);
+    if (result.kind === "not-found") return res.status(404).json({ error: "Course not found" });
+    if (result.kind === "already-has-chapters") return res.status(409).json({ error: "This course already has chapters. Import into a new course draft to avoid duplicate curriculum." });
+    res.status(201).json({ chapterCount: result.chapterCount, topicCount: result.topicCount, resourceCount: result.resourceCount });
   } catch (e) { next(e); }
 });
 api.post("/admin/courses/:id/chapters", requireAdmin, async (req, res, next) => { try { const input = chapterFields.parse(req.body); const course = await db.course.findUnique({ where: { id: String(req.params.id) }, select: { id: true } }); if (!course) return res.status(404).json({ error: "Course not found" }); const chapter = await db.chapter.create({ data: { ...input, courseId: course.id } }); res.status(201).json(chapter); } catch (e) { next(e); } });
