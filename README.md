@@ -10,12 +10,12 @@ UpShift is a learning platform starter built from the supplied standalone HTML r
 - Public API excludes draft courses and nested draft content, validates search/filter/pagination inputs, and documents response workflows in `docs/openapi.yaml`.
 - Anonymous server-scored assessment API endpoints; pre-submission payloads omit answer keys.
 - Sitemap and robots metadata routes.
-- Signed HTTP-only administrator sessions, password-hashed bootstrap, live dashboard metrics, and protected course draft CRUD.
+- Signed HTTP-only administrator sessions, password-hashed bootstrap, live dashboard metrics, and a protected hierarchical course builder with course, chapter, topic, and resource CRUD.
 - Learner assessment start/submit interface with server-side score calculation and feedback after submission.
 - Safe empty state when the API or database is unavailable; no fabricated video URLs or claims.
 - Repeatable site settings seed that intentionally does not publish demo content.
 
-The supplied HTML has demonstration-only course data and placeholder resources. This starter does not represent those as verified content. Admin editing currently supports course metadata only; chapter, topic, resource, assessment and question authoring screens/APIs are still missing, so publishing remains guarded. Learners can take an assessment when published records are supplied, but lesson navigation, video embedding and progress tracking are not built. Database-backed integration tests have not been added. The admin area is an initial protected foundation, not a complete production CMS.
+The supplied HTML has demonstration-only course data and placeholder resources. This starter does not represent those as verified content. Admins can create a course, lay out chapters, add topics with descriptions and short names, and attach one or more learning links to each topic. Courses can be published once each published chapter has a topic and each topic has a published resource. Assessment/question authoring, learner lesson navigation, video embedding and progress tracking are not built. Database-backed integration tests have not been added.
 
 ## Requirements
 

@@ -1,27 +1,298 @@
 "use client";
-import { FormEvent, useEffect, useState } from "react";
-import Link from "next/link";
-const adminApiBase = "/api/v1";
 
-type Admin={id:string;email:string};
-type Row={id:string;title:string;slug:string;shortDescription:string;category:string;difficulty:string;estimatedMinutes:number;featured:boolean;status:"DRAFT"|"PUBLISHED"};
-type Metrics={courses:number;publishedCourses:number;draftCourses:number;chapters:number;topics:number;resources:number;publishedAssessments:number;submittedAttempts:number;averagePercent:number|null};
-const blank={title:"",slug:"",shortDescription:"",description:"",category:"",difficulty:"BEGINNER",estimatedMinutes:0};
-export const dynamic="force-dynamic";
-export default function AdminPage(){
-  const [admin,setAdmin]=useState<Admin|null>(null),[email,setEmail]=useState(""),[password,setPassword]=useState(""),[rows,setRows]=useState<Row[]>([]),[metrics,setMetrics]=useState<Metrics|null>(null),[draft,setDraft]=useState(blank),[editing,setEditing]=useState<string|null>(null),[error,setError]=useState(""),[busy,setBusy]=useState(false);
-  async function load(){const me=await fetch(`${adminApiBase}/admin/auth/me`,{credentials:"include"});if(!me.ok){setAdmin(null);return}setAdmin(await me.json());const [c,m]=await Promise.all([fetch(`${adminApiBase}/admin/courses`,{credentials:"include"}),fetch(`${adminApiBase}/admin/dashboard`,{credentials:"include"})]);if(c.ok)setRows(await c.json());if(m.ok)setMetrics(await m.json())}
-  useEffect(()=>{void load()},[]);
-  async function login(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await fetch(`${adminApiBase}/admin/auth/login`,{method:"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({email,password})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not sign in");setAdmin(d);setPassword("");await load()}catch(x){setError(x instanceof Error?x.message:"Could not sign in")}finally{setBusy(false)}}
-  async function save(e:FormEvent){e.preventDefault();setBusy(true);setError("");try{const r=await fetch(`${adminApiBase}/admin/courses${editing?`/${editing}`:""}`,{method:editing?"PATCH":"POST",credentials:"include",headers:{"Content-Type":"application/json"},body:JSON.stringify({...draft,estimatedMinutes:Number(draft.estimatedMinutes),objectives:[],featured:false,...(!editing?{status:"DRAFT"}:{})})});const d=await r.json();if(!r.ok)throw new Error(d.error||"Could not save course");setDraft(blank);setEditing(null);await load()}catch(x){setError(x instanceof Error?x.message:"Could not save course")}finally{setBusy(false)}}
-  function edit(row:Row){setEditing(row.id);setDraft({title:row.title,slug:row.slug,shortDescription:row.shortDescription,description:"",category:row.category,difficulty:row.difficulty,estimatedMinutes:row.estimatedMinutes});document.getElementById("course-form")?.scrollIntoView({behavior:"smooth"})}
-  async function remove(row:Row){if(!window.confirm(`Delete “${row.title}” and all its chapters, lessons, assessments, and results? This cannot be undone.`))return;const r=await fetch(`${adminApiBase}/admin/courses/${row.id}`,{method:"DELETE",credentials:"include"});if(!r.ok){setError("Could not delete course");return}await load()}
-  async function logout(){await fetch(`${adminApiBase}/admin/auth/logout`,{method:"POST",credentials:"include"});setAdmin(null);setRows([]);setMetrics(null)}
-  return <main className="wrap section" style={{minHeight:"100vh"}}><header style={{display:"flex",alignItems:"center",justifyContent:"space-between",gap:20,marginBottom:40}}><Link className="brand" href="/">Up<b style={{color:"var(--lime)"}}>Shift</b> <span className="muted" style={{fontSize:15}}>Admin</span></Link>{admin&&<button className="btn" onClick={logout}>Sign out</button>}</header>
-    {!admin?<section className="note" style={{maxWidth:460,margin:"7vh auto"}}><div className="eyebrow">Administrator access</div><h1>Sign in to UpShift</h1><p className="muted">Use the admin account configured for this installation.</p><form onSubmit={login} style={{display:"grid",gap:14}}><label>Email<input className="search" type="email" autoComplete="username" required value={email} onChange={e=>setEmail(e.target.value)} style={{display:"block",width:"100%",marginTop:6}}/></label><label>Password<input className="search" type="password" autoComplete="current-password" required value={password} onChange={e=>setPassword(e.target.value)} style={{display:"block",width:"100%",marginTop:6}}/></label><button className="btn btn-primary" disabled={busy}>{busy?"Signing in…":"Sign in"}</button></form>{error&&<p role="alert" style={{color:"#ffb4a8"}}>{error}</p>}</section>:<><div className="eyebrow">Workspace</div><h1 style={{fontSize:42}}>Course dashboard</h1><p className="muted">Signed in as {admin.email}. New courses start as drafts.</p>{error&&<div role="alert" className="notice" style={{borderColor:"#b46363",margin:"18px 0"}}>{error}</div>}
-      {metrics&&<div className="course-grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(145px,1fr))"}}>{[["Courses",metrics.courses],["Published",metrics.publishedCourses],["Drafts",metrics.draftCourses],["Chapters",metrics.chapters],["Topics",metrics.topics],["Resources",metrics.resources],["Assessments",metrics.publishedAssessments],["Attempts",metrics.submittedAttempts]].map(([k,v])=><div className="note" key={String(k)}><div className="muted">{k}</div><strong style={{fontSize:25}}>{v}</strong></div>)}</div>}
-      <section className="section" style={{paddingBottom:12}}><h2>Courses</h2>{rows.length?<div style={{overflowX:"auto"}}><table style={{width:"100%",borderCollapse:"collapse",textAlign:"left"}}><thead><tr>{["Course","Category","Status","Actions"].map(x=><th key={x} style={{padding:12,borderBottom:"1px solid var(--bd)"}}>{x}</th>)}</tr></thead><tbody>{rows.map(row=><tr key={row.id}><td style={{padding:12,borderBottom:"1px solid var(--bd)"}}><strong>{row.title}</strong><div className="muted">/{row.slug}</div></td><td style={{padding:12,borderBottom:"1px solid var(--bd)"}}>{row.category}</td><td style={{padding:12,borderBottom:"1px solid var(--bd)"}}>{row.status}</td><td style={{padding:12,borderBottom:"1px solid var(--bd)",whiteSpace:"nowrap"}}><button className="btn" onClick={()=>edit(row)}>Edit</button> <button className="btn" onClick={()=>remove(row)}>Delete</button></td></tr>)}</tbody></table></div>:<p className="notice">No courses yet.</p>}</section>
-      <section className="section" id="course-form"><h2>{editing?"Edit course draft":"Create a course draft"}</h2><p className="muted">Course drafts can be created and updated here. Chapter, topic, resource, and assessment editors are still in development; publishing requires that complete curriculum.</p><form onSubmit={save} className="course-grid" style={{gridTemplateColumns:"repeat(auto-fit,minmax(220px,1fr))"}}>{[["Title","title"],["Slug","slug"],["Category","category"],["Short description","shortDescription"],["Full description","description"]].map(([label,key])=><label key={key}>{label}<input className="search" required={key!=="description"} value={draft[key as keyof typeof draft] as string} onChange={e=>setDraft({...draft,[key]:e.target.value})} style={{display:"block",width:"100%",marginTop:6}}/></label>)}<label>Difficulty<select className="search" value={draft.difficulty} onChange={e=>setDraft({...draft,difficulty:e.target.value})} style={{display:"block",width:"100%",marginTop:6}}><option value="BEGINNER">Beginner</option><option value="INTERMEDIATE">Intermediate</option><option value="ADVANCED">Advanced</option></select></label><label>Estimated minutes<input className="search" type="number" min="0" value={draft.estimatedMinutes} onChange={e=>setDraft({...draft,estimatedMinutes:Number(e.target.value)})} style={{display:"block",width:"100%",marginTop:6}}/></label><button className="btn btn-primary" disabled={busy}>{editing?"Save changes":"Save draft"}</button>{editing&&<button className="btn" type="button" onClick={()=>{setEditing(null);setDraft(blank)}}>Cancel editing</button>}</form></section>
+import { FormEvent, InputHTMLAttributes, useEffect, useState } from "react";
+import Link from "next/link";
+
+const api = "/api/v1";
+type Status = "DRAFT" | "PUBLISHED";
+type ResourceType = "VIDEO" | "ARTICLE" | "LINK";
+type Resource = { id: string; title: string; description: string; type: ResourceType; externalUrl: string; durationSeconds: number | null; status: Status };
+type Topic = { id: string; title: string; slug: string; description: string; objectives: string[]; order: number; status: Status; resources: Resource[] };
+type Chapter = { id: string; title: string; slug: string; description: string; order: number; status: Status; topics: Topic[] };
+type Course = { id: string; title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; featured: boolean; status: Status; objectives: string[]; audience: string; chapters?: Chapter[] };
+type Metrics = { courses: number; publishedCourses: number; draftCourses: number; chapters: number; topics: number; resources: number; publishedAssessments: number; submittedAttempts: number };
+type CourseDraft = { title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; objectivesText: string; audience: string };
+type ChapterDraft = { title: string; slug: string; description: string; order: number };
+type TopicDraft = { title: string; slug: string; description: string; objectivesText: string; order: number; linkTitle: string; linkDescription: string; linkType: ResourceType; linkUrl: string; durationMinutes: number };
+type ResourceDraft = { title: string; description: string; type: ResourceType; externalUrl: string; durationMinutes: number };
+
+const blankCourse: CourseDraft = { title: "", slug: "", shortDescription: "", description: "", category: "", difficulty: "BEGINNER", estimatedMinutes: 0, objectivesText: "", audience: "" };
+const blankChapter: ChapterDraft = { title: "", slug: "", description: "", order: 0 };
+const blankTopic: TopicDraft = { title: "", slug: "", description: "", objectivesText: "", order: 0, linkTitle: "", linkDescription: "", linkType: "VIDEO", linkUrl: "", durationMinutes: 0 };
+const blankResource: ResourceDraft = { title: "", description: "", type: "VIDEO", externalUrl: "", durationMinutes: 0 };
+
+function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+function fromCourse(course?: Course): CourseDraft {
+  return course ? { title: course.title, slug: course.slug, shortDescription: course.shortDescription, description: course.description || "", category: course.category, difficulty: course.difficulty, estimatedMinutes: course.estimatedMinutes, objectivesText: (course.objectives || []).join("\n"), audience: course.audience || "" } : blankCourse;
+}
+async function request<T>(path: string, init?: RequestInit): Promise<T> {
+  const response = await fetch(`${api}${path}`, { credentials: "include", ...init });
+  if (response.status === 204) return undefined as T;
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    const details = Array.isArray(data.details) ? data.details.map((issue: { message?: string }) => issue.message).filter(Boolean).join(" ") : "";
+    throw new Error(details || data.error || "The request could not be completed.");
+  }
+  return data as T;
+}
+const inputStyle = { display: "block", width: "100%", marginTop: 6 } as const;
+
+export const dynamic = "force-dynamic";
+export default function AdminPage() {
+  const [admin, setAdmin] = useState<{ id: string; email: string } | null>(null);
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [courses, setCourses] = useState<Course[]>([]);
+  const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [selected, setSelected] = useState<Course | null>(null);
+  const [courseDraft, setCourseDraft] = useState<CourseDraft>(blankCourse);
+  const [courseEditor, setCourseEditor] = useState<"new" | "edit" | null>(null);
+  const [chapterEditor, setChapterEditor] = useState<{ chapterId: string | null; value: ChapterDraft } | null>(null);
+  const [topicEditor, setTopicEditor] = useState<{ chapterId: string; topicId: string | null; resourceId: string | null; value: TopicDraft } | null>(null);
+  const [resourceEditor, setResourceEditor] = useState<{ topicId: string; resourceId: string | null; value: ResourceDraft } | null>(null);
+  const [error, setError] = useState("");
+  const [notice, setNotice] = useState("");
+  const [busy, setBusy] = useState(false);
+
+  async function loadOverview() {
+    const [courseRows, stats] = await Promise.all([
+      request<Course[]>("/admin/courses"),
+      request<Metrics>("/admin/dashboard"),
+    ]);
+    setCourses(courseRows);
+    setMetrics(stats);
+  }
+  async function loadCourse(id: string) {
+    const detail = await request<Course>(`/admin/courses/${id}`);
+    setSelected(detail);
+    setCourseDraft(fromCourse(detail));
+    await loadOverview();
+  }
+  useEffect(() => {
+    void request<{ id: string; email: string }>("/admin/auth/me").then(async (me) => {
+      setAdmin(me);
+      await loadOverview();
+    }).catch(() => setAdmin(null));
+  }, []);
+
+  async function login(event: FormEvent) {
+    event.preventDefault(); setBusy(true); setError("");
+    try {
+      const me = await request<{ id: string; email: string }>("/admin/auth/login", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ email, password }) });
+      setAdmin(me); setPassword(""); await loadOverview();
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not sign in."); }
+    finally { setBusy(false); }
+  }
+  async function logout() {
+    await request("/admin/auth/logout", { method: "POST" });
+    setAdmin(null); setSelected(null); setCourses([]); setMetrics(null);
+  }
+  async function saveCourse(event: FormEvent) {
+    event.preventDefault(); setBusy(true); setError(""); setNotice("");
+    const payload = { ...courseDraft, objectives: courseDraft.objectivesText.split("\n").map((x) => x.trim()).filter(Boolean), featured: selected?.featured || false, status: selected?.status || "DRAFT" };
+    try {
+      const saved = await request<Course>(selected && courseEditor === "edit" ? `/admin/courses/${selected.id}` : "/admin/courses", { method: selected && courseEditor === "edit" ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(payload) });
+      setCourseEditor(null); setNotice("Course details saved."); await loadCourse(saved.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save course."); }
+    finally { setBusy(false); }
+  }
+  async function changeCourseStatus() {
+    if (!selected) return; setBusy(true); setError(""); setNotice("");
+    try {
+      await request<Course>(`/admin/courses/${selected.id}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ status: selected.status === "PUBLISHED" ? "DRAFT" : "PUBLISHED" }) });
+      setNotice(selected.status === "PUBLISHED" ? "Course moved back to drafts." : "Course is published on the learning site.");
+      await loadCourse(selected.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not change course status."); }
+    finally { setBusy(false); }
+  }
+  async function saveChapter(event: FormEvent) {
+    event.preventDefault(); if (!selected || !chapterEditor) return; setBusy(true); setError("");
+    try {
+      await request(chapterEditor.chapterId ? `/admin/chapters/${chapterEditor.chapterId}` : `/admin/courses/${selected.id}/chapters`, { method: chapterEditor.chapterId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(chapterEditor.value) });
+      setChapterEditor(null); setNotice("Chapter saved."); await loadCourse(selected.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save chapter."); }
+    finally { setBusy(false); }
+  }
+  async function saveTopic(event: FormEvent) {
+    event.preventDefault(); if (!topicEditor) return; setBusy(true); setError("");
+    try {
+      const saved = await request<Topic>(topicEditor.topicId ? `/admin/topics/${topicEditor.topicId}` : `/admin/chapters/${topicEditor.chapterId}/topics`, { method: topicEditor.topicId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ title: topicEditor.value.title, slug: topicEditor.value.slug, description: topicEditor.value.description, objectives: topicEditor.value.objectivesText.split("\n").map((x) => x.trim()).filter(Boolean), order: topicEditor.value.order }) });
+      if (topicEditor.value.linkUrl.trim()) {
+        const resourceBody = { title: topicEditor.value.linkTitle || topicEditor.value.title, description: topicEditor.value.linkDescription, type: topicEditor.value.linkType, externalUrl: topicEditor.value.linkUrl, durationSeconds: topicEditor.value.durationMinutes ? topicEditor.value.durationMinutes * 60 : null };
+        await request(topicEditor.resourceId ? `/admin/resources/${topicEditor.resourceId}` : `/admin/topics/${saved.id}/resources`, { method: topicEditor.resourceId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(resourceBody) });
+      }
+      setTopicEditor(null); setNotice("Topic and learning link saved."); await loadCourse(selected!.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save topic."); }
+    finally { setBusy(false); }
+  }
+  async function saveResource(event: FormEvent) {
+    event.preventDefault(); if (!resourceEditor || !selected) return; setBusy(true); setError("");
+    try {
+      const value = { ...resourceEditor.value, durationSeconds: resourceEditor.value.durationMinutes ? resourceEditor.value.durationMinutes * 60 : null };
+      await request(resourceEditor.resourceId ? `/admin/resources/${resourceEditor.resourceId}` : `/admin/topics/${resourceEditor.topicId}/resources`, { method: resourceEditor.resourceId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) });
+      setResourceEditor(null); setNotice("Learning link saved."); await loadCourse(selected.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save learning link."); }
+    finally { setBusy(false); }
+  }
+  async function remove(path: string, label: string) {
+    if (!window.confirm(`Delete this ${label} and its nested content? This cannot be undone.`)) return;
+    const currentCourseId = selected?.id;
+    setBusy(true); setError("");
+    try { await request(path, { method: "DELETE" }); setNotice(`${label[0].toUpperCase() + label.slice(1)} deleted.`); if (path.startsWith("/admin/courses/")) { setSelected(null); await loadOverview(); } else if (currentCourseId) await loadCourse(currentCourseId); else await loadOverview(); }
+    catch (e) { setError(e instanceof Error ? e.message : `Could not delete ${label}.`); }
+    finally { setBusy(false); }
+  }
+  function openChapter(chapter?: Chapter) {
+    setChapterEditor({ chapterId: chapter?.id || null, value: chapter ? { title: chapter.title, slug: chapter.slug, description: chapter.description, order: chapter.order } : { ...blankChapter, order: selected?.chapters?.length || 0 } });
+  }
+  function openTopic(chapter: Chapter, topic?: Topic) {
+    const resource = topic?.resources?.[0];
+    setTopicEditor({ chapterId: chapter.id, topicId: topic?.id || null, resourceId: resource?.id || null, value: topic ? { title: topic.title, slug: topic.slug, description: topic.description, objectivesText: topic.objectives.join("\n"), order: topic.order, linkTitle: resource?.title || "", linkDescription: resource?.description || "", linkType: resource?.type || "VIDEO", linkUrl: resource?.externalUrl || "", durationMinutes: Math.round((resource?.durationSeconds || 0) / 60) } : { ...blankTopic, order: chapter.topics.length } });
+  }
+  function openResource(topic: Topic, resource?: Resource) {
+    setResourceEditor({ topicId: topic.id, resourceId: resource?.id || null, value: resource ? { title: resource.title, description: resource.description, type: resource.type, externalUrl: resource.externalUrl, durationMinutes: Math.round((resource.durationSeconds || 0) / 60) } : blankResource });
+  }
+
+  const labelStyle = { display: "block", fontWeight: 600, fontSize: 14 } as const;
+  const field = (label: string, value: string | number, onChange: (value: string) => void, props: InputHTMLAttributes<HTMLInputElement> = {}) => <label style={labelStyle}>{label}<input className="search" style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)} {...props}/></label>;
+  const textarea = (label: string, value: string, onChange: (value: string) => void, placeholder = "") => <label style={labelStyle}>{label}<textarea className="search" style={{ ...inputStyle, minHeight: 94, resize: "vertical" }} value={value} onChange={(e) => onChange(e.target.value)} placeholder={placeholder}/></label>;
+  const select = (label: string, value: string, onChange: (value: string) => void, options: [string, string][]) => <label style={labelStyle}>{label}<select className="search" style={inputStyle} value={value} onChange={(e) => onChange(e.target.value)}>{options.map(([key, text]) => <option key={key} value={key}>{text}</option>)}</select></label>;
+  const formGrid = { display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,240px),1fr))", gap: 16, marginTop: 20 } as const;
+  const actionRow = { display: "flex", gap: 10, flexWrap: "wrap", alignItems: "center" } as const;
+  const cardStyle = { border: "1px solid var(--bd)", background: "var(--s2)", borderRadius: 14, padding: 20, marginTop: 16 } as const;
+
+  return <main className="wrap section" style={{ minHeight: "100vh" }}>
+    <header style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 20, marginBottom: 38 }}>
+      <Link className="brand" href="/">Up<b style={{ color: "var(--lime)" }}>Shift</b> <span className="muted" style={{ fontSize: 15 }}>Admin</span></Link>
+      {admin && <div style={actionRow}><span className="muted">{admin.email}</span><button className="btn" onClick={() => void logout()}>Sign out</button></div>}
+    </header>
+    {!admin ? <section className="note" style={{ maxWidth: 460, margin: "7vh auto" }}>
+      <div className="eyebrow">Administrator access</div><h1>Sign in to UpShift</h1><p className="muted">Use the admin account configured for this installation.</p>
+      <form onSubmit={login} style={{ display: "grid", gap: 14 }}>
+        {field("Email", email, setEmail, { type: "email", autoComplete: "username", required: true })}
+        {field("Password", password, setPassword, { type: "password", autoComplete: "current-password", required: true })}
+        <button className="btn btn-primary" disabled={busy}>{busy ? "Signing in…" : "Sign in"}</button>
+      </form>{error && <p role="alert" style={{ color: "#ffb4a8" }}>{error}</p>}
+    </section> : <>
+      <div className="eyebrow">Course workspace</div>
+      <h1 style={{ fontSize: "clamp(34px,5vw,48px)", margin: "8px 0" }}>{selected ? selected.title : "Learning platform"}</h1>
+      <p className="muted" style={{ marginTop: 0 }}>{selected ? "Build the chapter outline first, then add topics and links inside each chapter." : "Create courses, lay out chapters, then add topics and their learning links."}</p>
+      {error && <div role="alert" className="notice" style={{ borderColor: "#b46363", margin: "18px 0", color: "#ffb4a8" }}>{error}</div>}
+      {notice && <div role="status" className="notice" style={{ borderColor: "var(--lime)", margin: "18px 0" }}>{notice}</div>}
+      {!selected ? <>
+        {metrics && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 12, margin: "24px 0 40px" }}>
+          {[["Courses", metrics.courses], ["Published", metrics.publishedCourses], ["Drafts", metrics.draftCourses], ["Chapters", metrics.chapters], ["Topics", metrics.topics], ["Links", metrics.resources]].map(([name, count]) => <div className="note" key={String(name)}><div className="muted">{name}</div><strong style={{ fontSize: 25 }}>{count}</strong></div>)}
+        </div>}
+        <div style={{ ...actionRow, justifyContent: "space-between" }}><h2 style={{ margin: 0 }}>Your courses</h2><button className="btn btn-primary" onClick={() => { setCourseDraft(blankCourse); setCourseEditor("new"); setError(""); setNotice(""); }}>Create a course</button></div>
+        {courseEditor === "new" && <section style={cardStyle}>
+          <h3 style={{ marginTop: 0 }}>Course details</h3><p className="muted">This creates a private draft. You can add the chapter skeleton right after saving.</p>
+          <form onSubmit={saveCourse}>
+            <div style={formGrid}>
+              {field("Course title", courseDraft.title, (v) => setCourseDraft({ ...courseDraft, title: v, slug: courseDraft.slug ? courseDraft.slug : slugify(v) }), { required: true, minLength: 2, maxLength: 120, placeholder: "Emotional Intelligence" })}
+              {field("Short name / URL", courseDraft.slug, (v) => setCourseDraft({ ...courseDraft, slug: slugify(v) }), { required: true, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*", placeholder: "emotional-intelligence" })}
+              {field("Category", courseDraft.category, (v) => setCourseDraft({ ...courseDraft, category: v }), { required: true, minLength: 2, placeholder: "Self improvement" })}
+              {field("Estimated course time (minutes)", courseDraft.estimatedMinutes, (v) => setCourseDraft({ ...courseDraft, estimatedMinutes: Number(v) }), { type: "number", min: 0 })}
+              {select("Difficulty", courseDraft.difficulty, (v) => setCourseDraft({ ...courseDraft, difficulty: v }), [["BEGINNER", "Beginner"], ["INTERMEDIATE", "Intermediate"], ["ADVANCED", "Advanced"]])}
+              {field("Audience", courseDraft.audience, (v) => setCourseDraft({ ...courseDraft, audience: v }), { placeholder: "Who this course is for" })}
+              <div style={{ gridColumn: "1 / -1" }}>{field("Short description (at least 10 characters)", courseDraft.shortDescription, (v) => setCourseDraft({ ...courseDraft, shortDescription: v }), { required: true, minLength: 10, maxLength: 280, placeholder: "A short summary shown on the course card" })}</div>
+              <div style={{ gridColumn: "1 / -1" }}>{textarea("Course overview", courseDraft.description, (v) => setCourseDraft({ ...courseDraft, description: v }), "What learners will learn in this course")}</div>
+              <div style={{ gridColumn: "1 / -1" }}>{textarea("Learning objectives (one per line)", courseDraft.objectivesText, (v) => setCourseDraft({ ...courseDraft, objectivesText: v }), "Understand…\nPractice…")}</div>
+            </div>
+            <div style={{ ...actionRow, marginTop: 18 }}><button className="btn btn-primary" disabled={busy}>{busy ? "Saving…" : "Save course and build chapters"}</button><button type="button" className="btn" onClick={() => setCourseEditor(null)}>Cancel</button></div>
+          </form>
+        </section>}
+        {courses.length ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: 16, marginTop: 20 }}>
+          {courses.map((course) => <article key={course.id} style={{ ...cardStyle, margin: 0 }}>
+            <div style={{ ...actionRow, justifyContent: "space-between" }}><span className="pill">{course.status === "PUBLISHED" ? "Published" : "Draft"}</span><span className="muted">{course.category}</span></div>
+            <h3 style={{ margin: "16px 0 7px" }}>{course.title}</h3><p className="muted">{course.shortDescription}</p>
+            <p className="muted" style={{ fontSize: 14 }}>{course.chapters?.length ?? 0} chapters · {course.slug}</p>
+            <button className="btn btn-primary" onClick={() => { setError(""); setNotice(""); void loadCourse(course.id); }}>Manage course</button>
+            <button className="btn" style={{ marginLeft: 8 }} onClick={() => void remove(`/admin/courses/${course.id}`, "course")}>Delete</button>
+          </article>)}
+        </div> : !courseEditor && <div className="notice" style={{ marginTop: 20 }}>No courses yet. Start by creating a course draft.</div>}
+      </> : <>
+        <div style={{ ...actionRow, margin: "20px 0" }}><button className="btn" onClick={() => { setSelected(null); setCourseEditor(null); setChapterEditor(null); setTopicEditor(null); setResourceEditor(null); setError(""); setNotice(""); void loadOverview(); }}>← All courses</button><span className="pill">{selected.status === "PUBLISHED" ? "Published" : "Draft"}</span><button className="btn" onClick={() => { setCourseDraft(fromCourse(selected)); setCourseEditor(courseEditor === "edit" ? null : "edit"); }}>Edit course details</button><button className="btn btn-primary" disabled={busy} onClick={() => void changeCourseStatus()}>{selected.status === "PUBLISHED" ? "Move to drafts" : "Publish course"}</button><button className="btn" onClick={() => void remove(`/admin/courses/${selected.id}`, "course")}>Delete course</button></div>
+        {courseEditor === "edit" && <section style={cardStyle}><h3 style={{ marginTop: 0 }}>Edit course details</h3><form onSubmit={saveCourse}><div style={formGrid}>
+          {field("Course title", courseDraft.title, (v) => setCourseDraft({ ...courseDraft, title: v }), { required: true, minLength: 2, maxLength: 120 })}
+          {field("Short name / URL", courseDraft.slug, (v) => setCourseDraft({ ...courseDraft, slug: slugify(v) }), { required: true, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" })}
+          {field("Category", courseDraft.category, (v) => setCourseDraft({ ...courseDraft, category: v }), { required: true, minLength: 2 })}
+          {field("Estimated course time (minutes)", courseDraft.estimatedMinutes, (v) => setCourseDraft({ ...courseDraft, estimatedMinutes: Number(v) }), { type: "number", min: 0 })}
+          {select("Difficulty", courseDraft.difficulty, (v) => setCourseDraft({ ...courseDraft, difficulty: v }), [["BEGINNER", "Beginner"], ["INTERMEDIATE", "Intermediate"], ["ADVANCED", "Advanced"]])}
+          {field("Audience", courseDraft.audience, (v) => setCourseDraft({ ...courseDraft, audience: v }))}
+          <div style={{ gridColumn: "1 / -1" }}>{field("Short description (at least 10 characters)", courseDraft.shortDescription, (v) => setCourseDraft({ ...courseDraft, shortDescription: v }), { required: true, minLength: 10, maxLength: 280 })}</div>
+          <div style={{ gridColumn: "1 / -1" }}>{textarea("Course overview", courseDraft.description, (v) => setCourseDraft({ ...courseDraft, description: v }))}</div>
+          <div style={{ gridColumn: "1 / -1" }}>{textarea("Learning objectives (one per line)", courseDraft.objectivesText, (v) => setCourseDraft({ ...courseDraft, objectivesText: v }))}</div>
+        </div><div style={{ ...actionRow, marginTop: 18 }}><button className="btn btn-primary" disabled={busy}>Save course details</button><button type="button" className="btn" onClick={() => setCourseEditor(null)}>Cancel</button></div></form></section>}
+        <section style={{ marginTop: 36 }}>
+          <div style={{ ...actionRow, justifyContent: "space-between" }}><div><div className="eyebrow">Step 1</div><h2 style={{ margin: "5px 0" }}>Chapter outline</h2><p className="muted" style={{ margin: 0 }}>Add the chapter skeleton first. Open each chapter to build its topics.</p></div><button className="btn btn-primary" onClick={() => openChapter()}>+ Add chapter</button></div>
+          {chapterEditor?.chapterId === null && <section style={cardStyle}><h3 style={{ marginTop: 0 }}>New chapter</h3><form onSubmit={saveChapter}><div style={formGrid}>
+            {field("Chapter title", chapterEditor.value.title, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, title: v, slug: chapterEditor.value.slug ? chapterEditor.value.slug : slugify(v) } }), { required: true, minLength: 2, placeholder: "Chapter 1 — Foundations" })}
+            {field("Short name / URL", chapterEditor.value.slug, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, slug: slugify(v) } }), { required: true, placeholder: "foundations" })}
+            {field("Position", chapterEditor.value.order + 1, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, order: Math.max(0, Number(v) - 1) } }), { type: "number", min: 1 })}
+            <div style={{ gridColumn: "1 / -1" }}>{textarea("Chapter summary", chapterEditor.value.description, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, description: v } }))}</div>
+          </div><div style={{ ...actionRow, marginTop: 16 }}><button className="btn btn-primary" disabled={busy}>Save chapter</button><button type="button" className="btn" onClick={() => setChapterEditor(null)}>Cancel</button></div></form></section>}
+          {!selected.chapters?.length && <div className="notice" style={{ marginTop: 16 }}>No chapters yet. Add the full chapter outline before filling in topics.</div>}
+          {selected.chapters?.map((chapter) => <article key={chapter.id} style={cardStyle}>
+            <div style={{ ...actionRow, justifyContent: "space-between" }}><div><span className="eyebrow">Chapter {chapter.order + 1}</span><h3 style={{ margin: "4px 0" }}>{chapter.title}</h3><p className="muted" style={{ margin: 0 }}>{chapter.description || chapter.slug}</p></div><div style={actionRow}><button className="btn" onClick={() => openChapter(chapter)}>Edit chapter</button><button className="btn" onClick={() => void remove(`/admin/chapters/${chapter.id}`, "chapter")}>Delete</button></div></div>
+            {chapterEditor?.chapterId === chapter.id && <form onSubmit={saveChapter} style={{ ...cardStyle, margin: "18px 0 0" }}><div style={formGrid}>
+              {field("Chapter title", chapterEditor.value.title, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, title: v } }), { required: true, minLength: 2 })}
+              {field("Short name / URL", chapterEditor.value.slug, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, slug: slugify(v) } }), { required: true })}
+              {field("Position", chapterEditor.value.order + 1, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, order: Math.max(0, Number(v) - 1) } }), { type: "number", min: 1 })}
+              <div style={{ gridColumn: "1 / -1" }}>{textarea("Chapter summary", chapterEditor.value.description, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, description: v } }))}</div>
+            </div><div style={{ ...actionRow, marginTop: 16 }}><button className="btn btn-primary" disabled={busy}>Save changes</button><button type="button" className="btn" onClick={() => setChapterEditor(null)}>Cancel</button></div></form>}
+            <div style={{ borderTop: "1px solid var(--bd)", marginTop: 20, paddingTop: 18 }}>
+              <div style={{ ...actionRow, justifyContent: "space-between" }}><div><div className="eyebrow">Step 2</div><h4 style={{ margin: "4px 0" }}>Topics · {chapter.topics.length}</h4></div><button className="btn" onClick={() => openTopic(chapter)}>+ Add topic</button></div>
+              {chapter.topics.map((topic) => <section key={topic.id} style={{ borderLeft: "3px solid var(--lime)", padding: "4px 0 4px 16px", margin: "18px 0" }}>
+                <div style={{ ...actionRow, justifyContent: "space-between" }}><div><strong>{chapter.order + 1}.{topic.order + 1} {topic.title}</strong><div className="muted">{topic.slug}</div></div><div style={actionRow}><button className="btn" onClick={() => openTopic(chapter, topic)}>Edit topic</button><button className="btn" onClick={() => void remove(`/admin/topics/${topic.id}`, "topic")}>Delete</button></div></div>
+                {topic.description && <p className="muted" style={{ margin: "8px 0" }}>{topic.description}</p>}
+                {topic.objectives?.length > 0 && <ul className="muted">{topic.objectives.map((objective) => <li key={objective}>{objective}</li>)}</ul>}
+                {topicEditor?.topicId === topic.id && <form onSubmit={saveTopic} style={{ ...cardStyle, margin: "14px 0" }}>
+                  <h4 style={{ marginTop: 0 }}>Edit topic and first learning link</h4><div style={formGrid}>
+                    {field("Topic title", topicEditor.value.title, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, title: v } }), { required: true, minLength: 2 })}
+                    {field("Short name / URL", topicEditor.value.slug, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, slug: slugify(v) } }), { required: true })}
+                    {field("Position", topicEditor.value.order + 1, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, order: Math.max(0, Number(v) - 1) } }), { type: "number", min: 1 })}
+                    <div style={{ gridColumn: "1 / -1" }}>{textarea("Topic description", topicEditor.value.description, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, description: v } }))}</div>
+                    <div style={{ gridColumn: "1 / -1" }}>{textarea("Topic objectives (one per line)", topicEditor.value.objectivesText, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, objectivesText: v } }))}</div>
+                    <div style={{ gridColumn: "1 / -1", borderTop: "1px solid var(--bd)", paddingTop: 16 }}><div className="eyebrow">Learning link</div></div>
+                    {field("Link title", topicEditor.value.linkTitle, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkTitle: v } }), { placeholder: "Watch, read, or open this resource" })}
+                    {select("Link type", topicEditor.value.linkType, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkType: v as ResourceType } }), [["VIDEO", "Video"], ["ARTICLE", "Article"], ["LINK", "Other link"]])}
+                    <div style={{ gridColumn: "1 / -1" }}>{field("Course / learning link URL", topicEditor.value.linkUrl, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkUrl: v } }), { type: "url", placeholder: "https://…" })}</div>
+                    {field("Link description", topicEditor.value.linkDescription, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkDescription: v } }))}
+                    {field("Video length (minutes)", topicEditor.value.durationMinutes, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, durationMinutes: Number(v) } }), { type: "number", min: 0 })}
+                  </div><div style={{ ...actionRow, marginTop: 16 }}><button className="btn btn-primary" disabled={busy}>Save topic</button><button type="button" className="btn" onClick={() => setTopicEditor(null)}>Cancel</button></div>
+                </form>}
+                <div style={{ display: "grid", gap: 8, marginTop: 10 }}>{topic.resources.map((resource) => <div key={resource.id} className="notice" style={{ display: "flex", flexWrap: "wrap", gap: 10, alignItems: "center", justifyContent: "space-between", padding: 12 }}>
+                  <div><span className="pill">{resource.type.toLowerCase()}</span> <a href={resource.externalUrl} target="_blank" rel="noreferrer" style={{ color: "var(--lime)", textDecoration: "underline" }}>{resource.title}</a><div className="muted" style={{ fontSize: 13 }}>{resource.description}</div></div>
+                  <div style={actionRow}><button className="btn" onClick={() => openResource(topic, resource)}>Edit link</button><button className="btn" onClick={() => void remove(`/admin/resources/${resource.id}`, "learning link")}>Delete</button></div>
+                </div>)}</div>
+                {resourceEditor?.topicId === topic.id && <form onSubmit={saveResource} style={{ ...cardStyle, margin: "12px 0", padding: 16 }}><h4 style={{ marginTop: 0 }}>{resourceEditor.resourceId ? "Edit learning link" : "Add another learning link"}</h4><div style={formGrid}>
+                  {field("Link title", resourceEditor.value.title, (v) => setResourceEditor({ ...resourceEditor, value: { ...resourceEditor.value, title: v } }), { required: true, minLength: 2 })}
+                  {select("Link type", resourceEditor.value.type, (v) => setResourceEditor({ ...resourceEditor, value: { ...resourceEditor.value, type: v as ResourceType } }), [["VIDEO", "Video"], ["ARTICLE", "Article"], ["LINK", "Other link"]])}
+                  <div style={{ gridColumn: "1 / -1" }}>{field("Link URL", resourceEditor.value.externalUrl, (v) => setResourceEditor({ ...resourceEditor, value: { ...resourceEditor.value, externalUrl: v } }), { required: true, type: "url", placeholder: "https://…" })}</div>
+                  {field("Description", resourceEditor.value.description, (v) => setResourceEditor({ ...resourceEditor, value: { ...resourceEditor.value, description: v } }))}
+                  {field("Video length (minutes)", resourceEditor.value.durationMinutes, (v) => setResourceEditor({ ...resourceEditor, value: { ...resourceEditor.value, durationMinutes: Number(v) } }), { type: "number", min: 0 })}
+                </div><div style={{ ...actionRow, marginTop: 14 }}><button className="btn btn-primary" disabled={busy}>Save link</button><button className="btn" type="button" onClick={() => setResourceEditor(null)}>Cancel</button></div></form>}
+                <button className="btn" style={{ marginTop: 10 }} onClick={() => openResource(topic)}>+ Add another link</button>
+              </section>)}
+              {topicEditor?.chapterId === chapter.id && topicEditor.topicId === null && <form onSubmit={saveTopic} style={{ ...cardStyle, margin: "14px 0" }}>
+                <h4 style={{ marginTop: 0 }}>New topic and learning link</h4><p className="muted">The short name is used in the topic URL. Add the link now or return to the topic to add it later.</p><div style={formGrid}>
+                  {field("Topic title", topicEditor.value.title, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, title: v, slug: topicEditor.value.slug ? topicEditor.value.slug : slugify(v) } }), { required: true, minLength: 2, placeholder: "Recognizing emotions" })}
+                  {field("Short name / URL", topicEditor.value.slug, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, slug: slugify(v) } }), { required: true, placeholder: "recognizing-emotions" })}
+                  {field("Position", topicEditor.value.order + 1, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, order: Math.max(0, Number(v) - 1) } }), { type: "number", min: 1 })}
+                  <div style={{ gridColumn: "1 / -1" }}>{textarea("Topic description", topicEditor.value.description, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, description: v } }))}</div>
+                  <div style={{ gridColumn: "1 / -1" }}>{textarea("Topic objectives (one per line)", topicEditor.value.objectivesText, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, objectivesText: v } }))}</div>
+                  <div style={{ gridColumn: "1 / -1", borderTop: "1px solid var(--bd)", paddingTop: 16 }}><div className="eyebrow">Learning link</div></div>
+                  {field("Link title", topicEditor.value.linkTitle, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkTitle: v } }), { placeholder: "Watch, read, or open this resource" })}
+                  {select("Link type", topicEditor.value.linkType, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkType: v as ResourceType } }), [["VIDEO", "Video"], ["ARTICLE", "Article"], ["LINK", "Other link"]])}
+                  <div style={{ gridColumn: "1 / -1" }}>{field("Course / learning link URL", topicEditor.value.linkUrl, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkUrl: v } }), { type: "url", placeholder: "https://…" })}</div>
+                  {field("Link description", topicEditor.value.linkDescription, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, linkDescription: v } }))}
+                  {field("Video length (minutes)", topicEditor.value.durationMinutes, (v) => setTopicEditor({ ...topicEditor, value: { ...topicEditor.value, durationMinutes: Number(v) } }), { type: "number", min: 0 })}
+                </div><div style={{ ...actionRow, marginTop: 16 }}><button className="btn btn-primary" disabled={busy}>Save topic</button><button type="button" className="btn" onClick={() => setTopicEditor(null)}>Cancel</button></div>
+              </form>}
+            </div>
+          </article>)}
+        </section>
+      </>}
     </>}
-  </main>
+  </main>;
 }

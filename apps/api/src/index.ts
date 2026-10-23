@@ -31,9 +31,12 @@ const requireAdmin: RequestHandler = (req, res, next) => { if (!sessionAdmin(req
 const cookieOptions = `Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 function safeHttpsUrl(value: string) { try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password ? url.toString() : ""; } catch { return ""; } }
 const courseFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), shortDescription: z.string().min(10).max(280), description: z.string().max(10000).optional(), category: z.string().min(2).max(60), difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]).default("BEGINNER"), objectives: z.array(z.string().max(250)).max(20).default([]), audience: z.string().max(500).optional(), thumbnailUrl: z.string().url().optional().or(z.literal("")), estimatedMinutes: z.number().int().nonnegative().default(0), featured: z.boolean().default(false), status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"), seoTitle: z.string().max(120).optional(), seoDescription: z.string().max(300).optional() });
+const chapterFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(5000).default(""), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
+const topicFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(10000).default(""), objectives: z.array(z.string().max(250)).max(20).default([]), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
+const resourceFields = z.object({ title: z.string().min(2).max(160), description: z.string().max(3000).default(""), type: z.enum(["VIDEO", "ARTICLE", "LINK"]).default("LINK"), externalUrl: z.string().url().max(2000), videoProvider: z.string().max(40).optional().nullable(), videoId: z.string().max(200).optional().nullable(), durationSeconds: z.number().int().nonnegative().optional().nullable(), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
 async function publishReady(id: string) {
-  const course = await db.course.findUnique({ where: { id }, include: { chapters: { where: { status: "PUBLISHED" }, include: { topics: { where: { status: "PUBLISHED" }, include: { resources: { where: { status: "PUBLISHED" } } } } } }, assessment: { include: { questions: { include: { options: true } } } } } });
-  return Boolean(course?.chapters.length && course.chapters.every(ch => ch.topics.length > 0) && course.chapters.every(ch => ch.topics.every(t => t.resources.length > 0)) && course.assessment?.status === "PUBLISHED" && course.assessment.questions.length > 0 && course.assessment.questions.every(q => q.options.filter(o => o.isCorrect).length === 1 && q.options.length >= 2));
+  const course = await db.course.findUnique({ where: { id }, include: { chapters: { include: { topics: { include: { resources: true } } } } } });
+  return Boolean(course?.chapters.length && course.chapters.every(ch => ch.status === "PUBLISHED" && ch.topics.length > 0 && ch.topics.every(t => t.status === "PUBLISHED" && t.resources.length > 0 && t.resources.every(r => r.status === "PUBLISHED"))));
 }
 api.get("/health", async (_req, res) => {
   try { await db.$queryRaw`SELECT 1`; res.json({ ok: true, database: "connected" }); }
@@ -72,11 +75,31 @@ api.get("/admin/dashboard", requireAdmin, async (_req, res, next) => {
   } catch (e) { next(e); }
 });
 api.get("/admin/courses", requireAdmin, async (_req, res, next) => { try { res.json(await db.course.findMany({ orderBy: { updatedAt: "desc" } })); } catch (e) { next(e); } });
+api.get("/admin/courses/:id", requireAdmin, async (req, res, next) => {
+  try {
+    const course = await db.course.findUnique({
+      where: { id: String(req.params.id) },
+      include: {
+        chapters: {
+          orderBy: { order: "asc" },
+          include: {
+            topics: {
+              orderBy: { order: "asc" },
+              include: { resources: { orderBy: { order: "asc" } } },
+            },
+          },
+        },
+      },
+    });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    res.json(course);
+  } catch (e) { next(e); }
+});
 api.post("/admin/courses", requireAdmin, async (req, res, next) => {
   try {
     const input = courseFields.parse(req.body);
     const course = await db.course.create({ data: { ...input, thumbnailUrl: input.thumbnailUrl || null } });
-    if (course.status === "PUBLISHED" && !(await publishReady(course.id))) { await db.course.update({ where: { id: course.id }, data: { status: "DRAFT", publishedAt: null } }); return res.status(422).json({ error: "A course needs published chapters, topics, resources, and a complete published assessment before publishing." }); }
+    if (course.status === "PUBLISHED" && !(await publishReady(course.id))) { await db.course.update({ where: { id: course.id }, data: { status: "DRAFT", publishedAt: null } }); return res.status(422).json({ error: "Add at least one published chapter, one published topic per chapter, and one published link/resource per topic before publishing." }); }
     res.status(201).json(course);
   } catch (e) { next(e); }
 });
@@ -84,11 +107,20 @@ api.patch("/admin/courses/:id", requireAdmin, async (req, res, next) => {
   try {
     const input = courseFields.partial().parse(req.body);
     const course = await db.course.update({ where: { id: String(req.params.id) }, data: { ...input, ...(input.thumbnailUrl !== undefined ? { thumbnailUrl: input.thumbnailUrl || null } : {}), ...(input.status === "PUBLISHED" ? { publishedAt: new Date() } : input.status === "DRAFT" ? { publishedAt: null } : {}) } });
-    if (course.status === "PUBLISHED" && !(await publishReady(course.id))) { await db.course.update({ where: { id: course.id }, data: { status: "DRAFT", publishedAt: null } }); return res.status(422).json({ error: "A course needs published chapters, topics, resources, and a complete published assessment before publishing." }); }
+    if (course.status === "PUBLISHED" && !(await publishReady(course.id))) { await db.course.update({ where: { id: course.id }, data: { status: "DRAFT", publishedAt: null } }); return res.status(422).json({ error: "Add at least one published chapter, one published topic per chapter, and one published link/resource per topic before publishing." }); }
     res.json(course);
   } catch (e) { next(e); }
 });
 api.delete("/admin/courses/:id", requireAdmin, async (req, res, next) => { try { await db.course.delete({ where: { id: String(req.params.id) } }); res.status(204).end(); } catch (e) { next(e); } });
+api.post("/admin/courses/:id/chapters", requireAdmin, async (req, res, next) => { try { const input = chapterFields.parse(req.body); const course = await db.course.findUnique({ where: { id: String(req.params.id) }, select: { id: true } }); if (!course) return res.status(404).json({ error: "Course not found" }); const chapter = await db.chapter.create({ data: { ...input, courseId: course.id } }); res.status(201).json(chapter); } catch (e) { next(e); } });
+api.patch("/admin/chapters/:id", requireAdmin, async (req, res, next) => { try { const input = chapterFields.partial().parse(req.body); const chapter = await db.chapter.update({ where: { id: String(req.params.id) }, data: input }); res.json(chapter); } catch (e) { next(e); } });
+api.delete("/admin/chapters/:id", requireAdmin, async (req, res, next) => { try { const chapter = await db.chapter.findUnique({ where: { id: String(req.params.id) }, select: { courseId: true } }); if (!chapter) return res.status(404).json({ error: "Chapter not found" }); await db.chapter.delete({ where: { id: String(req.params.id) } }); await db.course.updateMany({ where: { id: chapter.courseId }, data: { status: "DRAFT", publishedAt: null } }); res.status(204).end(); } catch (e) { next(e); } });
+api.post("/admin/chapters/:id/topics", requireAdmin, async (req, res, next) => { try { const input = topicFields.parse(req.body); const chapter = await db.chapter.findUnique({ where: { id: String(req.params.id) }, select: { id: true } }); if (!chapter) return res.status(404).json({ error: "Chapter not found" }); const topic = await db.topic.create({ data: { ...input, chapterId: chapter.id } }); res.status(201).json(topic); } catch (e) { next(e); } });
+api.patch("/admin/topics/:id", requireAdmin, async (req, res, next) => { try { const input = topicFields.partial().parse(req.body); const topic = await db.topic.update({ where: { id: String(req.params.id) }, data: input }); res.json(topic); } catch (e) { next(e); } });
+api.delete("/admin/topics/:id", requireAdmin, async (req, res, next) => { try { const topic = await db.topic.findUnique({ where: { id: String(req.params.id) }, select: { chapter: { select: { courseId: true } } } }); if (!topic) return res.status(404).json({ error: "Topic not found" }); await db.topic.delete({ where: { id: String(req.params.id) } }); await db.course.updateMany({ where: { id: topic.chapter.courseId }, data: { status: "DRAFT", publishedAt: null } }); res.status(204).end(); } catch (e) { next(e); } });
+api.post("/admin/topics/:id/resources", requireAdmin, async (req, res, next) => { try { const input = resourceFields.parse(req.body); const topic = await db.topic.findUnique({ where: { id: String(req.params.id) }, select: { id: true } }); if (!topic) return res.status(404).json({ error: "Topic not found" }); const resource = await db.learningResource.create({ data: { ...input, topicId: topic.id } }); res.status(201).json(resource); } catch (e) { next(e); } });
+api.patch("/admin/resources/:id", requireAdmin, async (req, res, next) => { try { const input = resourceFields.partial().parse(req.body); const resource = await db.learningResource.update({ where: { id: String(req.params.id) }, data: input }); res.json(resource); } catch (e) { next(e); } });
+api.delete("/admin/resources/:id", requireAdmin, async (req, res, next) => { try { const resource = await db.learningResource.findUnique({ where: { id: String(req.params.id) }, select: { topic: { select: { chapter: { select: { courseId: true } } } } } }); if (!resource) return res.status(404).json({ error: "Resource not found" }); await db.learningResource.delete({ where: { id: String(req.params.id) } }); await db.course.updateMany({ where: { id: resource.topic.chapter.courseId }, data: { status: "DRAFT", publishedAt: null } }); res.status(204).end(); } catch (e) { next(e); } });
 api.get("/courses", async (req, res, next) => {
   try {
     const query = z.object({ q: z.string().max(100).optional(), category: z.string().max(60).optional(), difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]).optional(), page: z.coerce.number().int().min(1).default(1), limit: z.coerce.number().int().min(1).max(30).default(12) }).safeParse(req.query);
@@ -149,6 +181,7 @@ api.post("/attempts/:id/submit", async (req, res, next) => {
 api.use((err: unknown, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
   console.error(err);
   if (err instanceof z.ZodError) return res.status(400).json({ error: "Invalid request", details: err.issues });
+  if (typeof err === "object" && err !== null && "code" in err && err.code === "P2002") return res.status(409).json({ error: "That short name is already in use here. Choose another one." });
   res.status(500).json({ error: "The request could not be completed." });
 });
 app.use("/api/v1", api);
