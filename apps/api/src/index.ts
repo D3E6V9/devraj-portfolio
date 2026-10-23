@@ -30,10 +30,12 @@ function sessionAdmin(req: express.Request): string | null {
 const requireAdmin: RequestHandler = (req, res, next) => { if (!sessionAdmin(req)) return res.status(401).json({ error: "Administrator login required" }); next(); };
 const cookieOptions = `Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 function safeHttpsUrl(value: string) { try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password ? url.toString() : ""; } catch { return ""; } }
-const courseFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), shortDescription: z.string().min(10).max(280), description: z.string().max(10000).optional(), category: z.string().min(2).max(60), difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]).default("BEGINNER"), objectives: z.array(z.string().max(250)).max(20).default([]), audience: z.string().max(500).optional(), thumbnailUrl: z.string().url().optional().or(z.literal("")), estimatedMinutes: z.number().int().nonnegative().default(0), featured: z.boolean().default(false), status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"), seoTitle: z.string().max(120).optional(), seoDescription: z.string().max(300).optional() });
+const courseFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), shortDescription: z.string().min(10).max(280), description: z.string().max(10000).optional(), category: z.string().min(2).max(60), difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]).default("BEGINNER"), objectives: z.array(z.string().max(250)).max(20).default([]), audience: z.string().max(500).optional(), thumbnailUrl: z.string().url().refine(value => new URL(value).protocol === "https:", "Image links must use HTTPS").optional().or(z.literal("")), estimatedMinutes: z.number().int().nonnegative().default(0), featured: z.boolean().default(false), status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"), seoTitle: z.string().max(120).optional(), seoDescription: z.string().max(300).optional() });
 const chapterFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(5000).default(""), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
 const topicFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(10000).default(""), objectives: z.array(z.string().max(250)).max(20).default([]), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
 const resourceFields = z.object({ title: z.string().min(2).max(160), description: z.string().max(3000).default(""), type: z.enum(["VIDEO", "ARTICLE", "LINK"]).default("LINK"), externalUrl: z.string().url().max(2000), videoProvider: z.string().max(40).optional().nullable(), videoId: z.string().max(200).optional().nullable(), durationSeconds: z.number().int().nonnegative().optional().nullable(), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
+const visitorFields = z.object({ visitorId: z.string().uuid() });
+const utcDay = (date = new Date()) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 async function publishReady(id: string) {
   const course = await db.course.findUnique({ where: { id }, include: { chapters: { include: { topics: { include: { resources: true } } } } } });
   return Boolean(course?.chapters.length && course.chapters.every(ch => ch.status === "PUBLISHED" && ch.topics.length > 0 && ch.topics.every(t => t.status === "PUBLISHED" && t.resources.length > 0 && t.resources.every(r => r.status === "PUBLISHED"))));
@@ -66,12 +68,98 @@ api.get("/admin/auth/me", requireAdmin, async (req, res, next) => {
     res.json(admin);
   } catch (e) { next(e); }
 });
+api.post("/analytics/page-view", async (req, res, next) => {
+  try {
+    const input = visitorFields.extend({ path: z.string().min(1).max(300), courseSlug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/).optional() }).parse(req.body);
+    const path = input.path.split(/[?#]/, 1)[0];
+    if (!path.startsWith("/") || path.startsWith("//") || path === "/admin" || path.startsWith("/admin/")) return res.status(400).json({ error: "Invalid page path" });
+    const course = input.courseSlug ? await db.course.findFirst({ where: { slug: input.courseSlug, status: "PUBLISHED" }, select: { id: true, viewCount: true, likeCount: true } }) : null;
+    if (input.courseSlug && (!course || path !== `/courses/${input.courseSlug}`)) return res.status(404).json({ error: "Course not found" });
+    const day = utcDay();
+    const result = await db.$transaction(async tx => {
+      const inserted = await tx.pageView.createMany({ data: { visitorId: input.visitorId, path, day, courseId: course?.id }, skipDuplicates: true });
+      if (inserted.count && course) await tx.course.update({ where: { id: course.id }, data: { viewCount: { increment: 1 } } });
+      if (!course) return { counted: inserted.count > 0 };
+      const [current, liked] = await Promise.all([
+        tx.course.findUniqueOrThrow({ where: { id: course.id }, select: { viewCount: true, likeCount: true } }),
+        tx.courseLike.findUnique({ where: { courseId_visitorId: { courseId: course.id, visitorId: input.visitorId } }, select: { id: true } }),
+      ]);
+      return { counted: inserted.count > 0, ...current, liked: Boolean(liked) };
+    });
+    res.json(result);
+  } catch (e) { next(e); }
+});
+api.post("/analytics/chapter-view", async (req, res, next) => {
+  try {
+    const input = visitorFields.extend({ chapterId: z.string().min(1).max(40) }).parse(req.body);
+    const chapter = await db.chapter.findFirst({ where: { id: input.chapterId, status: "PUBLISHED", course: { status: "PUBLISHED" } }, select: { id: true } });
+    if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    const day = utcDay();
+    const result = await db.$transaction(async tx => {
+      const inserted = await tx.chapterView.createMany({ data: { chapterId: chapter.id, visitorId: input.visitorId, day }, skipDuplicates: true });
+      if (inserted.count) await tx.chapter.update({ where: { id: chapter.id }, data: { viewCount: { increment: 1 } } });
+      const [current, liked] = await Promise.all([
+        tx.chapter.findUniqueOrThrow({ where: { id: chapter.id }, select: { viewCount: true, likeCount: true } }),
+        tx.chapterLike.findUnique({ where: { chapterId_visitorId: { chapterId: chapter.id, visitorId: input.visitorId } }, select: { id: true } }),
+      ]);
+      return { counted: inserted.count > 0, ...current, liked: Boolean(liked) };
+    });
+    res.json(result);
+  } catch (e) { next(e); }
+});
+api.post("/courses/:slug/like", async (req, res, next) => {
+  try {
+    const { visitorId } = visitorFields.parse(req.body);
+    const course = await db.course.findFirst({ where: { slug: String(req.params.slug), status: "PUBLISHED" }, select: { id: true } });
+    if (!course) return res.status(404).json({ error: "Course not found" });
+    const result = await db.$transaction(async tx => {
+      const where = { courseId_visitorId: { courseId: course.id, visitorId } };
+      const existing = await tx.courseLike.findUnique({ where });
+      if (existing) {
+        await tx.courseLike.delete({ where: { id: existing.id } });
+        await tx.course.update({ where: { id: course.id }, data: { likeCount: { decrement: 1 } } });
+      } else {
+        await tx.courseLike.create({ data: { courseId: course.id, visitorId } });
+        await tx.course.update({ where: { id: course.id }, data: { likeCount: { increment: 1 } } });
+      }
+      const current = await tx.course.findUniqueOrThrow({ where: { id: course.id }, select: { likeCount: true } });
+      return { ...current, liked: !existing };
+    });
+    res.json(result);
+  } catch (e) { next(e); }
+});
+api.post("/chapters/:id/like", async (req, res, next) => {
+  try {
+    const { visitorId } = visitorFields.parse(req.body);
+    const chapter = await db.chapter.findFirst({ where: { id: String(req.params.id), status: "PUBLISHED", course: { status: "PUBLISHED" } }, select: { id: true } });
+    if (!chapter) return res.status(404).json({ error: "Chapter not found" });
+    const result = await db.$transaction(async tx => {
+      const where = { chapterId_visitorId: { chapterId: chapter.id, visitorId } };
+      const existing = await tx.chapterLike.findUnique({ where });
+      if (existing) {
+        await tx.chapterLike.delete({ where: { id: existing.id } });
+        await tx.chapter.update({ where: { id: chapter.id }, data: { likeCount: { decrement: 1 } } });
+      } else {
+        await tx.chapterLike.create({ data: { chapterId: chapter.id, visitorId } });
+        await tx.chapter.update({ where: { id: chapter.id }, data: { likeCount: { increment: 1 } } });
+      }
+      const current = await tx.chapter.findUniqueOrThrow({ where: { id: chapter.id }, select: { likeCount: true } });
+      return { ...current, liked: !existing };
+    });
+    res.json(result);
+  } catch (e) { next(e); }
+});
 api.get("/admin/dashboard", requireAdmin, async (_req, res, next) => {
   try {
-    const [courses, publishedCourses, chapters, topics, resources, assessments, attempts, aggregates] = await Promise.all([
-      db.course.count(), db.course.count({ where: { status: "PUBLISHED" } }), db.chapter.count(), db.topic.count(), db.learningResource.count(), db.assessment.count({ where: { status: "PUBLISHED" } }), db.assessmentAttempt.count({ where: { submittedAt: { not: null } } }), db.assessmentAttempt.aggregate({ where: { submittedAt: { not: null } }, _avg: { percent: true } })
+    const today = utcDay();
+    const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+    const [courses, publishedCourses, chapters, topics, resources, assessments, attempts, aggregates, totalPageViews, todayPageViews, dailyViews, topPages] = await Promise.all([
+      db.course.count(), db.course.count({ where: { status: "PUBLISHED" } }), db.chapter.count(), db.topic.count(), db.learningResource.count(), db.assessment.count({ where: { status: "PUBLISHED" } }), db.assessmentAttempt.count({ where: { submittedAt: { not: null } } }), db.assessmentAttempt.aggregate({ where: { submittedAt: { not: null } }, _avg: { percent: true } }),
+      db.pageView.count(), db.pageView.count({ where: { day: today } }),
+      db.pageView.groupBy({ by: ["day"], where: { day: { gte: weekAgo } }, _count: { _all: true }, orderBy: { day: "asc" } }),
+      db.pageView.groupBy({ by: ["path"], _count: { _all: true }, orderBy: { _count: { path: "desc" } }, take: 5 }),
     ]);
-    res.json({ courses, publishedCourses, draftCourses: courses - publishedCourses, chapters, topics, resources, publishedAssessments: assessments, submittedAttempts: attempts, averagePercent: aggregates._avg.percent });
+    res.json({ courses, publishedCourses, draftCourses: courses - publishedCourses, chapters, topics, resources, publishedAssessments: assessments, submittedAttempts: attempts, averagePercent: aggregates._avg.percent, traffic: { totalPageViews, todayPageViews, last7Days: dailyViews.reduce((sum, row) => sum + row._count._all, 0), dailyViews: dailyViews.map(row => ({ day: row.day, count: row._count._all })), topPages: topPages.map(row => ({ path: row.path, count: row._count._all })) } });
   } catch (e) { next(e); }
 });
 api.get("/admin/courses", requireAdmin, async (_req, res, next) => { try { res.json(await db.course.findMany({ orderBy: { updatedAt: "desc" }, include: { _count: { select: { chapters: true } } } })); } catch (e) { next(e); } });

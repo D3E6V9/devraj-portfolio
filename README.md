@@ -15,7 +15,7 @@ UpShift is a learning platform starter built from the supplied standalone HTML r
 - Safe empty state when the API or database is unavailable; no fabricated video URLs or claims.
 - Repeatable site settings seed that intentionally does not publish demo content.
 
-The supplied HTML has demonstration-only course data and placeholder resources. This starter does not represent those as verified content. Admins can create a course, lay out chapters, add topics with descriptions and short names, and attach one or more learning links to each topic. Courses can be published once each published chapter has a topic and each topic has a published resource. Assessment/question authoring, learner lesson navigation, video embedding and progress tracking are not built. Database-backed integration tests have not been added.
+The supplied HTML has demonstration-only course data and placeholder resources. This starter does not represent those as verified content. Admins can create courses with externally hosted cover images, lay out chapters, add topics with descriptions and short names, and attach learning links. Supported YouTube, Vimeo, Google Drive, and direct video links play inline. Public course and chapter pages include daily unique view counts and likes; the admin dashboard summarizes site traffic and popular pages. Traffic uses a random browser identifier and does not collect IP addresses. Assessment/question authoring and learner lesson progress tracking are not built. Database-backed integration tests have not been added.
 
 ## Requirements
 
@@ -35,7 +35,7 @@ The site runs at `http://localhost:3000`, and the API is at `http://localhost:40
 
 ## Data model
 
-Prisma defines Course → Chapter → Topic → LearningResource, plus Assessment → Question → AnswerOption and persisted AssessmentAttempt records. Publication state is explicit at each content level. Course deletion cascades to its curriculum and assessment history; the admin UI confirms the destructive action.
+Prisma defines Course → Chapter → Topic → LearningResource, plus Assessment → Question → AnswerOption and persisted AssessmentAttempt records. It also stores image links, course/chapter likes, course/chapter daily unique views, and daily unique page views for the admin traffic report. Publication state is explicit at each content level. Course deletion cascades to its curriculum and assessment history; the admin UI confirms the destructive action.
 
 ## Deployment
 

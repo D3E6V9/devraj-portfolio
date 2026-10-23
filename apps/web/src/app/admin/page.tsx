@@ -8,22 +8,22 @@ type Status = "DRAFT" | "PUBLISHED";
 type ResourceType = "VIDEO" | "ARTICLE" | "LINK";
 type Resource = { id: string; title: string; description: string; type: ResourceType; externalUrl: string; durationSeconds: number | null; status: Status };
 type Topic = { id: string; title: string; slug: string; description: string; objectives: string[]; order: number; status: Status; resources: Resource[] };
-type Chapter = { id: string; title: string; slug: string; description: string; order: number; status: Status; topics: Topic[] };
-type Course = { id: string; title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; featured: boolean; status: Status; objectives: string[]; audience: string; chapters?: Chapter[]; _count?: { chapters: number } };
-type Metrics = { courses: number; publishedCourses: number; draftCourses: number; chapters: number; topics: number; resources: number; publishedAssessments: number; submittedAttempts: number };
-type CourseDraft = { title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; objectivesText: string; audience: string };
+type Chapter = { id: string; title: string; slug: string; description: string; order: number; status: Status; viewCount: number; likeCount: number; topics: Topic[] };
+type Course = { id: string; title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; featured: boolean; thumbnailUrl: string | null; viewCount: number; likeCount: number; status: Status; objectives: string[]; audience: string; chapters?: Chapter[]; _count?: { chapters: number } };
+type Metrics = { courses: number; publishedCourses: number; draftCourses: number; chapters: number; topics: number; resources: number; publishedAssessments: number; submittedAttempts: number; traffic: { totalPageViews: number; todayPageViews: number; last7Days: number; dailyViews: { day: string; count: number }[]; topPages: { path: string; count: number }[] } };
+type CourseDraft = { title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; objectivesText: string; audience: string; thumbnailUrl: string };
 type ChapterDraft = { title: string; slug: string; description: string; order: number };
 type TopicDraft = { title: string; slug: string; description: string; objectivesText: string; order: number; linkTitle: string; linkDescription: string; linkType: ResourceType; linkUrl: string; durationMinutes: number };
 type ResourceDraft = { title: string; description: string; type: ResourceType; externalUrl: string; durationMinutes: number };
 
-const blankCourse: CourseDraft = { title: "", slug: "", shortDescription: "", description: "", category: "", difficulty: "BEGINNER", estimatedMinutes: 0, objectivesText: "", audience: "" };
+const blankCourse: CourseDraft = { title: "", slug: "", shortDescription: "", description: "", category: "", difficulty: "BEGINNER", estimatedMinutes: 0, objectivesText: "", audience: "", thumbnailUrl: "" };
 const blankChapter: ChapterDraft = { title: "", slug: "", description: "", order: 0 };
 const blankTopic: TopicDraft = { title: "", slug: "", description: "", objectivesText: "", order: 0, linkTitle: "", linkDescription: "", linkType: "VIDEO", linkUrl: "", durationMinutes: 0 };
 const blankResource: ResourceDraft = { title: "", description: "", type: "VIDEO", externalUrl: "", durationMinutes: 0 };
 
 function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
 function fromCourse(course?: Course): CourseDraft {
-  return course ? { title: course.title, slug: course.slug, shortDescription: course.shortDescription, description: course.description || "", category: course.category, difficulty: course.difficulty, estimatedMinutes: course.estimatedMinutes, objectivesText: (course.objectives || []).join("\n"), audience: course.audience || "" } : blankCourse;
+  return course ? { title: course.title, slug: course.slug, shortDescription: course.shortDescription, description: course.description || "", category: course.category, difficulty: course.difficulty, estimatedMinutes: course.estimatedMinutes, objectivesText: (course.objectives || []).join("\n"), audience: course.audience || "", thumbnailUrl: course.thumbnailUrl || "" } : blankCourse;
 }
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const response = await fetch(`${api}${path}`, { credentials: "include", ...init });
@@ -183,6 +183,16 @@ export default function AdminPage() {
         {metrics && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 12, margin: "24px 0 40px" }}>
           {[["Courses", metrics.courses], ["Published", metrics.publishedCourses], ["Drafts", metrics.draftCourses], ["Chapters", metrics.chapters], ["Topics", metrics.topics], ["Links", metrics.resources]].map(([name, count]) => <div className="note" key={String(name)}><div className="muted">{name}</div><strong style={{ fontSize: 25 }}>{count}</strong></div>)}
         </div>}
+        {metrics && <section className="note" style={{ margin: "-20px 0 36px" }}>
+          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}><div><div className="eyebrow">Audience</div><h2 style={{ margin: "4px 0" }}>Site traffic</h2></div><span className="muted">Counts are unique visitors per page each day.</span></div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 16 }}>
+            {[["Today", metrics.traffic.todayPageViews], ["Last 7 days", metrics.traffic.last7Days], ["All time", metrics.traffic.totalPageViews]].map(([label, count]) => <div className="notice" key={String(label)}><div className="muted">{label}</div><strong style={{ fontSize: 24 }}>{Number(count).toLocaleString()}</strong></div>)}
+          </div>
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))", gap: 24, marginTop: 20 }}>
+            <div><h3>Daily visits</h3>{metrics.traffic.dailyViews.length ? metrics.traffic.dailyViews.map((row) => <div key={row.day} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--bd)", padding: "6px 0" }}><span className="muted">{new Date(row.day).toLocaleDateString()}</span><strong>{row.count}</strong></div>) : <p className="muted">Traffic will appear as visitors browse the site.</p>}</div>
+            <div><h3>Popular pages</h3>{metrics.traffic.topPages.length ? metrics.traffic.topPages.map((row) => <div key={row.path} style={{ display: "flex", justifyContent: "space-between", gap: 16, borderBottom: "1px solid var(--bd)", padding: "6px 0" }}><span className="muted" style={{ overflowWrap: "anywhere" }}>{row.path}</span><strong>{row.count}</strong></div>) : <p className="muted">No page visits yet.</p>}</div>
+          </div>
+        </section>}
         <div style={{ ...actionRow, justifyContent: "space-between" }}><h2 style={{ margin: 0 }}>Your courses</h2><button className="btn btn-primary" onClick={() => { setCourseDraft(blankCourse); setCourseEditor("new"); setError(""); setNotice(""); }}>Create a course</button></div>
         {courseEditor === "new" && <section style={cardStyle}>
           <h3 style={{ marginTop: 0 }}>Course details</h3><p className="muted">This creates a private draft. You can add the chapter skeleton right after saving.</p>
@@ -194,6 +204,7 @@ export default function AdminPage() {
               {field("Estimated course time (minutes)", courseDraft.estimatedMinutes, (v) => setCourseDraft({ ...courseDraft, estimatedMinutes: Number(v) }), { type: "number", min: 0 })}
               {select("Difficulty", courseDraft.difficulty, (v) => setCourseDraft({ ...courseDraft, difficulty: v }), [["BEGINNER", "Beginner"], ["INTERMEDIATE", "Intermediate"], ["ADVANCED", "Advanced"]])}
               {field("Audience", courseDraft.audience, (v) => setCourseDraft({ ...courseDraft, audience: v }), { placeholder: "Who this course is for" })}
+              <div style={{ gridColumn: "1 / -1" }}>{field("Course cover image URL (optional)", courseDraft.thumbnailUrl, (v) => setCourseDraft({ ...courseDraft, thumbnailUrl: v }), { type: "url", placeholder: "https://image-host.com/course-cover.jpg" })}<span className="muted" style={{ fontSize: 13 }}>Paste a public HTTPS image link from your image host.</span>{courseDraft.thumbnailUrl && <img src={courseDraft.thumbnailUrl} alt="Course cover preview" style={{ width: 220, maxWidth: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: 10, marginTop: 10 }} />}</div>
               <div style={{ gridColumn: "1 / -1" }}>{field("Short description (at least 10 characters)", courseDraft.shortDescription, (v) => setCourseDraft({ ...courseDraft, shortDescription: v }), { required: true, minLength: 10, maxLength: 280, placeholder: "A short summary shown on the course card" })}</div>
               <div style={{ gridColumn: "1 / -1" }}>{textarea("Course overview", courseDraft.description, (v) => setCourseDraft({ ...courseDraft, description: v }), "What learners will learn in this course")}</div>
               <div style={{ gridColumn: "1 / -1" }}>{textarea("Learning objectives (one per line)", courseDraft.objectivesText, (v) => setCourseDraft({ ...courseDraft, objectivesText: v }), "Understand…\nPractice…")}</div>
@@ -204,14 +215,15 @@ export default function AdminPage() {
         {courses.length ? <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,300px),1fr))", gap: 16, marginTop: 20 }}>
           {courses.map((course) => <article key={course.id} style={{ ...cardStyle, margin: 0 }}>
             <div style={{ ...actionRow, justifyContent: "space-between" }}><span className="pill">{course.status === "PUBLISHED" ? "Published" : "Draft"}</span><span className="muted">{course.category}</span></div>
+            {course.thumbnailUrl && <img src={course.thumbnailUrl} alt={`${course.title} cover`} loading="lazy" style={{ display: "block", width: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: 10, marginTop: 14 }} />}
             <h3 style={{ margin: "16px 0 7px" }}>{course.title}</h3><p className="muted">{course.shortDescription}</p>
-            <p className="muted" style={{ fontSize: 14 }}>{course._count?.chapters ?? 0} chapters · {course.slug}</p>
+            <p className="muted" style={{ fontSize: 14 }}>{course._count?.chapters ?? 0} chapters · {course.viewCount.toLocaleString()} views · {course.likeCount.toLocaleString()} likes</p>
             <button className="btn btn-primary" onClick={() => { setError(""); setNotice(""); void loadCourse(course.id); }}>Manage course</button>
             <button className="btn" style={{ marginLeft: 8 }} onClick={() => void remove(`/admin/courses/${course.id}`, "course")}>Delete</button>
           </article>)}
         </div> : !courseEditor && <div className="notice" style={{ marginTop: 20 }}>No courses yet. Start by creating a course draft.</div>}
       </> : <>
-        <div style={{ ...actionRow, margin: "20px 0" }}><button className="btn" onClick={() => { setSelected(null); setCourseEditor(null); setChapterEditor(null); setTopicEditor(null); setResourceEditor(null); setError(""); setNotice(""); void loadOverview(); }}>← All courses</button><span className="pill">{selected.status === "PUBLISHED" ? "Published" : "Draft"}</span><button className="btn" onClick={() => { setCourseDraft(fromCourse(selected)); setCourseEditor(courseEditor === "edit" ? null : "edit"); }}>Edit course details</button><button className="btn btn-primary" disabled={busy} onClick={() => void changeCourseStatus()}>{selected.status === "PUBLISHED" ? "Move to drafts" : "Publish course"}</button><button className="btn" onClick={() => void remove(`/admin/courses/${selected.id}`, "course")}>Delete course</button></div>
+        <div style={{ ...actionRow, margin: "20px 0" }}><button className="btn" onClick={() => { setSelected(null); setCourseEditor(null); setChapterEditor(null); setTopicEditor(null); setResourceEditor(null); setError(""); setNotice(""); void loadOverview(); }}>← All courses</button><span className="pill">{selected.status === "PUBLISHED" ? "Published" : "Draft"}</span><span className="muted">{selected.viewCount.toLocaleString()} views · {selected.likeCount.toLocaleString()} likes</span><button className="btn" onClick={() => { setCourseDraft(fromCourse(selected)); setCourseEditor(courseEditor === "edit" ? null : "edit"); }}>Edit course details</button><button className="btn btn-primary" disabled={busy} onClick={() => void changeCourseStatus()}>{selected.status === "PUBLISHED" ? "Move to drafts" : "Publish course"}</button><button className="btn" onClick={() => void remove(`/admin/courses/${selected.id}`, "course")}>Delete course</button></div>
         {courseEditor === "edit" && <section style={cardStyle}><h3 style={{ marginTop: 0 }}>Edit course details</h3><form onSubmit={saveCourse}><div style={formGrid}>
           {field("Course title", courseDraft.title, (v) => setCourseDraft({ ...courseDraft, title: v }), { required: true, minLength: 2, maxLength: 120 })}
           {field("Short name / URL", courseDraft.slug, (v) => setCourseDraft({ ...courseDraft, slug: slugify(v) }), { required: true, pattern: "[a-z0-9]+(?:-[a-z0-9]+)*" })}
@@ -219,6 +231,7 @@ export default function AdminPage() {
           {field("Estimated course time (minutes)", courseDraft.estimatedMinutes, (v) => setCourseDraft({ ...courseDraft, estimatedMinutes: Number(v) }), { type: "number", min: 0 })}
           {select("Difficulty", courseDraft.difficulty, (v) => setCourseDraft({ ...courseDraft, difficulty: v }), [["BEGINNER", "Beginner"], ["INTERMEDIATE", "Intermediate"], ["ADVANCED", "Advanced"]])}
           {field("Audience", courseDraft.audience, (v) => setCourseDraft({ ...courseDraft, audience: v }))}
+          <div style={{ gridColumn: "1 / -1" }}>{field("Course cover image URL (optional)", courseDraft.thumbnailUrl, (v) => setCourseDraft({ ...courseDraft, thumbnailUrl: v }), { type: "url", placeholder: "https://image-host.com/course-cover.jpg" })}<span className="muted" style={{ fontSize: 13 }}>Paste a public HTTPS image link from your image host.</span>{courseDraft.thumbnailUrl && <img src={courseDraft.thumbnailUrl} alt="Course cover preview" style={{ width: 220, maxWidth: "100%", aspectRatio: "16 / 9", objectFit: "cover", borderRadius: 10, marginTop: 10 }} />}</div>
           <div style={{ gridColumn: "1 / -1" }}>{field("Short description (at least 10 characters)", courseDraft.shortDescription, (v) => setCourseDraft({ ...courseDraft, shortDescription: v }), { required: true, minLength: 10, maxLength: 280 })}</div>
           <div style={{ gridColumn: "1 / -1" }}>{textarea("Course overview", courseDraft.description, (v) => setCourseDraft({ ...courseDraft, description: v }))}</div>
           <div style={{ gridColumn: "1 / -1" }}>{textarea("Learning objectives (one per line)", courseDraft.objectivesText, (v) => setCourseDraft({ ...courseDraft, objectivesText: v }))}</div>
@@ -233,7 +246,7 @@ export default function AdminPage() {
           </div><div style={{ ...actionRow, marginTop: 16 }}><button className="btn btn-primary" disabled={busy}>Save chapter</button><button type="button" className="btn" onClick={() => setChapterEditor(null)}>Cancel</button></div></form></section>}
           {!selected.chapters?.length && <div className="notice" style={{ marginTop: 16 }}>No chapters yet. Add the full chapter outline before filling in topics.</div>}
           {selected.chapters?.map((chapter) => <article key={chapter.id} style={cardStyle}>
-            <div style={{ ...actionRow, justifyContent: "space-between" }}><div><span className="eyebrow">Chapter {chapter.order + 1}</span><h3 style={{ margin: "4px 0" }}>{chapter.title}</h3><p className="muted" style={{ margin: 0 }}>{chapter.description || chapter.slug}</p></div><div style={actionRow}><button className="btn" onClick={() => openChapter(chapter)}>Edit chapter</button><button className="btn" onClick={() => void remove(`/admin/chapters/${chapter.id}`, "chapter")}>Delete</button></div></div>
+            <div style={{ ...actionRow, justifyContent: "space-between" }}><div><span className="eyebrow">Chapter {chapter.order + 1}</span><h3 style={{ margin: "4px 0" }}>{chapter.title}</h3><p className="muted" style={{ margin: 0 }}>{chapter.description || chapter.slug}</p><p className="muted" style={{ margin: "6px 0 0", fontSize: 13 }}>{chapter.viewCount.toLocaleString()} views · {chapter.likeCount.toLocaleString()} likes</p></div><div style={actionRow}><button className="btn" onClick={() => openChapter(chapter)}>Edit chapter</button><button className="btn" onClick={() => void remove(`/admin/chapters/${chapter.id}`, "chapter")}>Delete</button></div></div>
             {chapterEditor?.chapterId === chapter.id && <form onSubmit={saveChapter} style={{ ...cardStyle, margin: "18px 0 0" }}><div style={formGrid}>
               {field("Chapter title", chapterEditor.value.title, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, title: v } }), { required: true, minLength: 2 })}
               {field("Short name / URL", chapterEditor.value.slug, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, slug: slugify(v) } }), { required: true })}

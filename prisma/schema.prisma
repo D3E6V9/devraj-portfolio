@@ -1,20 +1,23 @@
 generator client {
   provider = "prisma-client-js"
 }
+
 datasource db {
   provider = "postgresql"
-  url = env("DATABASE_URL")
+  url      = env("DATABASE_URL")
 }
 
 enum PublishState {
   DRAFT
   PUBLISHED
 }
+
 enum Difficulty {
   BEGINNER
   INTERMEDIATE
   ADVANCED
 }
+
 enum ResourceType {
   VIDEO
   ARTICLE
@@ -22,130 +25,202 @@ enum ResourceType {
 }
 
 model Course {
-  id String @id @default(cuid())
-  title String
-  slug String @unique
+  id               String       @id @default(cuid())
+  title            String
+  slug             String       @unique
   shortDescription String
-  description String @default("")
-  category String
-  difficulty Difficulty @default(BEGINNER)
-  objectives String[]
-  audience String @default("")
-  thumbnailUrl String?
-  estimatedMinutes Int @default(0)
-  featured Boolean @default(false)
-  status PublishState @default(DRAFT)
-  seoTitle String?
-  seoDescription String?
-  publishedAt DateTime?
-  chapters Chapter[]
-  assessment Assessment?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  description      String       @default("")
+  category         String
+  difficulty       Difficulty   @default(BEGINNER)
+  objectives       String[]
+  audience         String       @default("")
+  thumbnailUrl     String?
+  estimatedMinutes Int          @default(0)
+  featured         Boolean      @default(false)
+  viewCount        Int          @default(0)
+  likeCount        Int          @default(0)
+  status           PublishState @default(DRAFT)
+  seoTitle         String?
+  seoDescription   String?
+  publishedAt      DateTime?
+  chapters         Chapter[]
+  likes            CourseLike[]
+  pageViews        PageView[]
+  assessment       Assessment?
+  createdAt        DateTime     @default(now())
+  updatedAt        DateTime     @updatedAt
+
   @@index([status, publishedAt])
 }
+
 model Chapter {
-  id String @id @default(cuid())
-  courseId String
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title String
-  slug String
-  description String @default("")
-  order Int @default(0)
-  status PublishState @default(DRAFT)
-  topics Topic[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String        @id @default(cuid())
+  courseId    String
+  course      Course        @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  description String        @default("")
+  order       Int           @default(0)
+  status      PublishState  @default(DRAFT)
+  viewCount   Int           @default(0)
+  likeCount   Int           @default(0)
+  topics      Topic[]
+  likes       ChapterLike[]
+  views       ChapterView[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+
   @@unique([courseId, slug])
   @@index([courseId, order])
 }
+
 model Topic {
-  id String @id @default(cuid())
-  chapterId String
-  chapter Chapter @relation(fields: [chapterId], references: [id], onDelete: Cascade)
-  title String
-  slug String
-  description String @default("")
-  objectives String[]
-  order Int @default(0)
-  status PublishState @default(DRAFT)
-  resources LearningResource[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  id          String             @id @default(cuid())
+  chapterId   String
+  chapter     Chapter            @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  title       String
+  slug        String
+  description String             @default("")
+  objectives  String[]
+  order       Int                @default(0)
+  status      PublishState       @default(DRAFT)
+  resources   LearningResource[]
+  createdAt   DateTime           @default(now())
+  updatedAt   DateTime           @updatedAt
+
   @@unique([chapterId, slug])
   @@index([chapterId, order])
 }
+
 model LearningResource {
-  id String @id @default(cuid())
-  topicId String
-  topic Topic @relation(fields: [topicId], references: [id], onDelete: Cascade)
-  title String
-  description String @default("")
-  type ResourceType @default(VIDEO)
-  externalUrl String
-  videoProvider String?
-  videoId String?
+  id              String       @id @default(cuid())
+  topicId         String
+  topic           Topic        @relation(fields: [topicId], references: [id], onDelete: Cascade)
+  title           String
+  description     String       @default("")
+  type            ResourceType @default(VIDEO)
+  externalUrl     String
+  videoProvider   String?
+  videoId         String?
   durationSeconds Int?
-  order Int @default(0)
-  status PublishState @default(DRAFT)
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  order           Int          @default(0)
+  status          PublishState @default(DRAFT)
+  createdAt       DateTime     @default(now())
+  updatedAt       DateTime     @updatedAt
+
   @@index([topicId, order])
 }
+
 model Assessment {
-  id String @id @default(cuid())
-  courseId String @unique
-  course Course @relation(fields: [courseId], references: [id], onDelete: Cascade)
-  title String
-  instructions String @default("")
-  passingPercent Int @default(70)
+  id               String              @id @default(cuid())
+  courseId         String              @unique
+  course           Course              @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  title            String
+  instructions     String              @default("")
+  passingPercent   Int                 @default(70)
   timeLimitMinutes Int?
-  maxAttempts Int?
-  status PublishState @default(DRAFT)
-  questions Question[]
-  attempts AssessmentAttempt[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  maxAttempts      Int?
+  status           PublishState        @default(DRAFT)
+  questions        Question[]
+  attempts         AssessmentAttempt[]
+  createdAt        DateTime            @default(now())
+  updatedAt        DateTime            @updatedAt
 }
+
 model Question {
-  id String @id @default(cuid())
+  id           String         @id @default(cuid())
   assessmentId String
-  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
-  text String
-  explanation String @default("")
-  points Int @default(1)
-  order Int @default(0)
-  options AnswerOption[]
+  assessment   Assessment     @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  text         String
+  explanation  String         @default("")
+  points       Int            @default(1)
+  order        Int            @default(0)
+  options      AnswerOption[]
+
   @@index([assessmentId, order])
 }
+
 model AnswerOption {
-  id String @id @default(cuid())
+  id         String   @id @default(cuid())
   questionId String
-  question Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
-  text String
-  isCorrect Boolean @default(false)
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  isCorrect  Boolean  @default(false)
 }
+
 model AssessmentAttempt {
-  id String @id @default(cuid())
+  id           String     @id @default(cuid())
   assessmentId String
-  assessment Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
+  assessment   Assessment @relation(fields: [assessmentId], references: [id], onDelete: Cascade)
   learnerToken String
-  startedAt DateTime @default(now())
-  submittedAt DateTime?
-  answers Json?
-  score Int?
-  percent Int?
-  passed Boolean?
+  startedAt    DateTime   @default(now())
+  submittedAt  DateTime?
+  answers      Json?
+  score        Int?
+  percent      Int?
+  passed       Boolean?
+
   @@index([assessmentId, learnerToken])
 }
+
 model AdminUser {
-  id String @id @default(cuid())
-  email String @unique
+  id           String   @id @default(cuid())
+  email        String   @unique
   passwordHash String
-  createdAt DateTime @default(now())
+  createdAt    DateTime @default(now())
 }
+
 model SiteSetting {
-  key String @id
-  value String
+  key       String   @id
+  value     String
   updatedAt DateTime @updatedAt
+}
+
+model CourseLike {
+  id        String   @id @default(cuid())
+  courseId  String
+  course    Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  visitorId String
+  createdAt DateTime @default(now())
+
+  @@unique([courseId, visitorId])
+  @@index([courseId, createdAt])
+}
+
+model ChapterLike {
+  id        String   @id @default(cuid())
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  visitorId String
+  createdAt DateTime @default(now())
+
+  @@unique([chapterId, visitorId])
+  @@index([chapterId, createdAt])
+}
+
+model PageView {
+  id        String   @id @default(cuid())
+  visitorId String
+  path      String
+  day       DateTime
+  courseId  String?
+  course    Course?  @relation(fields: [courseId], references: [id], onDelete: SetNull)
+  createdAt DateTime @default(now())
+
+  @@unique([visitorId, path, day])
+  @@index([day])
+  @@index([path, day])
+}
+
+model ChapterView {
+  id        String   @id @default(cuid())
+  chapterId String
+  chapter   Chapter  @relation(fields: [chapterId], references: [id], onDelete: Cascade)
+  visitorId String
+  day       DateTime
+  createdAt DateTime @default(now())
+
+  @@unique([chapterId, visitorId, day])
+  @@index([chapterId, day])
+  @@index([day])
 }

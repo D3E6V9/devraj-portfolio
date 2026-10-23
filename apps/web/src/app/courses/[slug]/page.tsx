@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCourse } from "@/lib/api";
+import { CourseEngagement, TrackedChapter } from "@/components/engagement";
 
 type LearningResource = { id: string; title: string; description: string; type: string; externalUrl: string };
 
@@ -64,15 +65,16 @@ export default async function CoursePage({ params }: { params: Promise<{ slug: s
       <h1 style={{ fontSize: "clamp(38px,6vw,62px)", maxWidth: 850, margin: "12px 0" }}>{c.title}</h1>
       <p className="muted" style={{ maxWidth: 700, fontSize: 18 }}>{c.description || c.shortDescription}</p>
       <p className="muted">{c.chapters.length} chapters · {c.estimatedMinutes} minutes · Free</p>
+      {c.thumbnailUrl && <img src={c.thumbnailUrl} alt={`${c.title} course cover`} style={{ display: "block", width: "100%", maxHeight: 480, aspectRatio: "16 / 7", objectFit: "cover", borderRadius: 16, border: "1px solid var(--bd)" }} />}
+      <CourseEngagement slug={c.slug} views={c.viewCount} likes={c.likeCount} />
       <div className="curriculum"><div><h2>Course curriculum</h2>
-        {c.chapters.map((ch, i) => <details className="chapter" key={ch.id} open={i === 0}>
-          <summary><strong>Chapter {i + 1}: {ch.title}</strong></summary>
+        {c.chapters.map((ch, i) => <TrackedChapter chapterId={ch.id} key={ch.id} defaultOpen={i === 0} initialViews={ch.viewCount} initialLikes={ch.likeCount} title={`Chapter ${i + 1}: ${ch.title}`}>
           <p className="muted">{ch.description}</p>
           {ch.topics.map(t => <section className="topic-link" key={t.id}>
             <strong>{t.title}</strong><p style={{ margin: "4px 0" }}>{t.description}</p>
             {t.resources.map(resource => <LearningResourceView key={resource.id} resource={resource} />)}
           </section>)}
-        </details>)}
+        </TrackedChapter>)}
         {!c.chapters.length && <div className="notice">The curriculum is being prepared.</div>}
         {c.assessment && <section className="note" style={{ marginTop: 20 }}><h3>{c.assessment.title}</h3><p className="muted">{c.assessment.questions.length} questions · Pass with {c.assessment.passingPercent}%</p><Link className="btn btn-primary" href={`/courses/${c.slug}/assessment`}>Start final assessment</Link></section>}
       </div><aside className="note"><h3>What you will learn</h3><ul>{c.objectives.map(x => <li key={x}>{x}</li>)}</ul><h3>Who this is for</h3><p className="muted">{c.audience || "Curious learners"}</p>{c.assessment && <p className="tag">Final assessment · {c.assessment.questions.length} questions</p>}</aside></div>
