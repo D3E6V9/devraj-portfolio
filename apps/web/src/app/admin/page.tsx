@@ -15,6 +15,9 @@ type CourseDraft = { title: string; slug: string; shortDescription: string; desc
 type ChapterDraft = { title: string; slug: string; description: string; order: number };
 type TopicDraft = { title: string; slug: string; description: string; objectivesText: string; order: number; linkTitle: string; linkDescription: string; linkType: ResourceType; linkUrl: string; durationMinutes: number };
 type ResourceDraft = { title: string; description: string; type: ResourceType; externalUrl: string; durationMinutes: number };
+type OutlineResource = { title: string; externalUrl: string; type: ResourceType; videoProvider: string | null; videoId: string | null; durationSeconds: number | null };
+type OutlineTopic = { title: string; slug: string; resources: OutlineResource[] };
+type OutlineChapter = { title: string; slug: string; topics: OutlineTopic[] };
 
 const blankCourse: CourseDraft = { title: "", slug: "", shortDescription: "", description: "", category: "", difficulty: "BEGINNER", estimatedMinutes: 0, objectivesText: "", audience: "", thumbnailUrl: "" };
 const blankChapter: ChapterDraft = { title: "", slug: "", description: "", order: 0 };
@@ -22,6 +25,81 @@ const blankTopic: TopicDraft = { title: "", slug: "", description: "", objective
 const blankResource: ResourceDraft = { title: "", description: "", type: "VIDEO", externalUrl: "", durationMinutes: 0 };
 
 function slugify(value: string) { return value.toLowerCase().trim().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+function uniqueSlug(value: string, used: Set<string>) {
+  const base = slugify(value) || "item";
+  let candidate = base;
+  let suffix = 2;
+  while (used.has(candidate)) candidate = `${base}-${suffix++}`;
+  used.add(candidate);
+  return candidate;
+}
+function youtubeId(value: string) {
+  try {
+    const url = new URL(value);
+    if (url.hostname === "youtu.be") return url.pathname.split("/").filter(Boolean)[0] || null;
+    if (url.hostname === "youtube.com" || url.hostname.endsWith(".youtube.com") || url.hostname === "youtube-nocookie.com" || url.hostname.endsWith(".youtube-nocookie.com")) return url.searchParams.get("v") || url.pathname.match(/\/(?:embed|shorts|live)\/([^/?]+)/)?.[1] || null;
+  } catch { /* URL validation below reports malformed links. */ }
+  return null;
+}
+async function parseWordOutline(file: File): Promise<OutlineChapter[]> {
+  const mammoth = await import("mammoth/mammoth.browser");
+  const { value: html } = await mammoth.convertToHtml({ arrayBuffer: await file.arrayBuffer() });
+  const document = new DOMParser().parseFromString(html, "text/html");
+  const table = document.querySelector("table");
+  if (!table) throw new Error("No table was found. Use a Word table with Chapter, Topic, Source/Link, and Duration columns.");
+  const rows = [...table.querySelectorAll("tr")].map(row => [...row.querySelectorAll("th,td")].map(cell => ({ text: (cell.textContent || "").trim(), link: cell.querySelector("a")?.getAttribute("href")?.trim() || "" })));
+  const headerIndex = rows.findIndex(row => row.some(cell => /chapter/i.test(cell.text)) && row.some(cell => /topic/i.test(cell.text)) && row.some(cell => /source|link|url/i.test(cell.text)));
+  if (headerIndex < 0) throw new Error("Could not identify the table columns. Include headers for Chapter, Topic, Source (or Link), and optionally Duration.");
+  const header = rows[headerIndex].map(cell => cell.text.toLowerCase());
+  const column = (pattern: RegExp) => header.findIndex(value => pattern.test(value));
+  const chapterColumn = column(/chapter/);
+  const topicColumn = column(/topic/);
+  const linkColumn = column(/source|link|url/);
+  const durationColumn = column(/duration|minute|time/);
+  const chapters: OutlineChapter[] = [];
+  const chapterSlugs = new Set<string>();
+  let currentChapter: OutlineChapter | null = null;
+  let lastChapter = "";
+  let importedRows = 0;
+  for (const row of rows.slice(headerIndex + 1)) {
+    const value = (index: number) => index < 0 ? "" : row[index]?.text || "";
+    const chapterName = value(chapterColumn) || lastChapter;
+    const topicName = value(topicColumn);
+    const linkCell = linkColumn < 0 ? undefined : row[linkColumn];
+    const link = linkCell?.link || linkCell?.text || "";
+    if (!chapterName && !topicName && !link) continue;
+    if (chapterName) lastChapter = chapterName;
+    if (!topicName || !link || !lastChapter) throw new Error(`A table row is missing its chapter, topic, or link: ${row.map(cell => cell.text).filter(Boolean).join(" · ")}`);
+    let parsedUrl: URL;
+    try { parsedUrl = new URL(link); } catch { throw new Error(`This learning link is not a valid URL: ${link}`); }
+    if (parsedUrl.protocol !== "https:" || parsedUrl.username || parsedUrl.password) throw new Error(`Learning links must use HTTPS: ${link}`);
+    if (!currentChapter || currentChapter.title !== lastChapter) {
+      currentChapter = { title: lastChapter, slug: uniqueSlug(lastChapter, chapterSlugs), topics: [] };
+      chapters.push(currentChapter);
+    }
+    let seconds: number | null = null;
+    const duration = value(durationColumn).trim();
+    if (duration) {
+      if (/^\d+(?:\.\d+)?$/.test(duration)) seconds = Math.round(Number(duration) * 60);
+      else {
+        const parts = duration.split(":").map(Number);
+        if (parts.some(part => !Number.isFinite(part) || part < 0) || parts.length > 3) throw new Error(`Invalid duration “${duration}”. Use minutes:seconds.`);
+        seconds = parts.reduce((total, part) => total * 60 + part, 0);
+      }
+    }
+    const id = youtubeId(parsedUrl.toString());
+    const topic = currentChapter.topics.find(item => item.title.toLowerCase() === topicName.toLowerCase());
+    const resource: OutlineResource = { title: topicName, externalUrl: parsedUrl.toString(), type: id ? "VIDEO" : "LINK", videoProvider: id ? "YOUTUBE" : null, videoId: id, durationSeconds: seconds };
+    if (topic) topic.resources.push(resource);
+    else {
+      const topicSlugs = new Set(currentChapter.topics.map(item => item.slug));
+      currentChapter.topics.push({ title: topicName, slug: uniqueSlug(topicName, topicSlugs), resources: [resource] });
+    }
+    importedRows += 1;
+  }
+  if (!importedRows) throw new Error("The Word table has no curriculum rows below its header.");
+  return chapters;
+}
 function fromCourse(course?: Course): CourseDraft {
   return course ? { title: course.title, slug: course.slug, shortDescription: course.shortDescription, description: course.description || "", category: course.category, difficulty: course.difficulty, estimatedMinutes: course.estimatedMinutes, objectivesText: (course.objectives || []).join("\n"), audience: course.audience || "", thumbnailUrl: course.thumbnailUrl || "" } : blankCourse;
 }
@@ -50,6 +128,8 @@ export default function AdminPage() {
   const [chapterEditor, setChapterEditor] = useState<{ chapterId: string | null; value: ChapterDraft } | null>(null);
   const [topicEditor, setTopicEditor] = useState<{ chapterId: string; topicId: string | null; resourceId: string | null; value: TopicDraft } | null>(null);
   const [resourceEditor, setResourceEditor] = useState<{ topicId: string; resourceId: string | null; value: ResourceDraft } | null>(null);
+  const [outlinePreview, setOutlinePreview] = useState<OutlineChapter[] | null>(null);
+  const [outlineFileName, setOutlineFileName] = useState("");
   const [error, setError] = useState("");
   const [notice, setNotice] = useState("");
   const [busy, setBusy] = useState(false);
@@ -132,6 +212,30 @@ export default function AdminPage() {
       await request(resourceEditor.resourceId ? `/admin/resources/${resourceEditor.resourceId}` : `/admin/topics/${resourceEditor.topicId}/resources`, { method: resourceEditor.resourceId ? "PATCH" : "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(value) });
       setResourceEditor(null); setNotice("Learning link saved."); await loadCourse(selected.id);
     } catch (e) { setError(e instanceof Error ? e.message : "Could not save learning link."); }
+    finally { setBusy(false); }
+  }
+  async function readOutline(file?: File) {
+    setError(""); setNotice(""); setOutlinePreview(null); setOutlineFileName("");
+    if (!file) return;
+    setBusy(true);
+    try {
+      const chapters = await parseWordOutline(file);
+      setOutlinePreview(chapters); setOutlineFileName(file.name);
+      const topics = chapters.reduce((sum, chapter) => sum + chapter.topics.length, 0);
+      const resources = chapters.reduce((sum, chapter) => sum + chapter.topics.reduce((n, topic) => n + topic.resources.length, 0), 0);
+      setNotice(`Word file ready: ${chapters.length} chapters, ${topics} topics, and ${resources} links. Review the outline and import when ready.`);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not read this Word document."); }
+    finally { setBusy(false); }
+  }
+  async function importOutline() {
+    if (!selected || !outlinePreview?.length) return;
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await request<{ chapterCount: number; topicCount: number; resourceCount: number }>(`/admin/courses/${selected.id}/import-outline`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chapters: outlinePreview }) });
+      setOutlinePreview(null); setOutlineFileName("");
+      setNotice(`Imported ${result.chapterCount} chapters, ${result.topicCount} topics, and ${result.resourceCount} links. All descriptions are blank and the curriculum remains in draft.`);
+      await loadCourse(selected.id);
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not import the Word outline."); }
     finally { setBusy(false); }
   }
   async function remove(path: string, label: string) {
@@ -238,6 +342,13 @@ export default function AdminPage() {
         </div><div style={{ ...actionRow, marginTop: 18 }}><button className="btn btn-primary" disabled={busy}>Save course details</button><button type="button" className="btn" onClick={() => setCourseEditor(null)}>Cancel</button></div></form></section>}
         <section style={{ marginTop: 36 }}>
           <div style={{ ...actionRow, justifyContent: "space-between" }}><div><div className="eyebrow">Step 1</div><h2 style={{ margin: "5px 0" }}>Chapter outline</h2><p className="muted" style={{ margin: 0 }}>Add the chapter skeleton first. Open each chapter to build its topics.</p></div><button className="btn btn-primary" onClick={() => openChapter()}>+ Add chapter</button></div>
+          {!selected.chapters?.length && <section className="note" style={{ marginTop: 18 }}>
+            <h3 style={{ marginTop: 0 }}>Or import the outline from Word</h3>
+            <p className="muted">Choose a .docx file with a table containing Chapter, Topic, and Source/Link columns. Duration is optional. This reads the table in your browser; descriptions stay blank, and everything is created as a draft.</p>
+            <label style={{ display: "block", maxWidth: 560 }}>Word document<input style={inputStyle} type="file" accept=".docx,application/vnd.openxmlformats-officedocument.wordprocessingml.document" disabled={busy} onChange={(event) => void readOutline(event.target.files?.[0])} /></label>
+            {outlineFileName && <div className="muted" style={{ marginTop: 12 }}>Ready to import: {outlineFileName}</div>}
+            {outlinePreview && <div style={{ ...actionRow, marginTop: 14 }}><button className="btn btn-primary" disabled={busy} onClick={() => void importOutline()}>{busy ? "Importing…" : "Import chapters and topics"}</button><button className="btn" disabled={busy} onClick={() => { setOutlinePreview(null); setOutlineFileName(""); }}>Clear selection</button></div>}
+          </section>}
           {chapterEditor?.chapterId === null && <section style={cardStyle}><h3 style={{ marginTop: 0 }}>New chapter</h3><form onSubmit={saveChapter}><div style={formGrid}>
             {field("Chapter title", chapterEditor.value.title, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, title: v, slug: chapterEditor.value.slug ? chapterEditor.value.slug : slugify(v) } }), { required: true, minLength: 2, placeholder: "Chapter 1 — Foundations" })}
             {field("Short name / URL", chapterEditor.value.slug, (v) => setChapterEditor({ ...chapterEditor, value: { ...chapterEditor.value, slug: slugify(v) } }), { required: true, placeholder: "foundations" })}

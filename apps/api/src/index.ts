@@ -200,6 +200,34 @@ api.patch("/admin/courses/:id", requireAdmin, async (req, res, next) => {
   } catch (e) { next(e); }
 });
 api.delete("/admin/courses/:id", requireAdmin, async (req, res, next) => { try { await db.course.delete({ where: { id: String(req.params.id) } }); res.status(204).end(); } catch (e) { next(e); } });
+api.post("/admin/courses/:id/import-outline", requireAdmin, async (req, res, next) => {
+  try {
+    const input = z.object({ chapters: z.array(z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), topics: z.array(z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), resources: z.array(z.object({ title: z.string().min(2).max(160), externalUrl: z.string().url().max(2000), type: z.enum(["VIDEO", "ARTICLE", "LINK"]), videoProvider: z.string().max(40).nullable(), videoId: z.string().max(200).nullable(), durationSeconds: z.number().int().nonnegative().nullable() })).min(1) })).min(1) })).min(1).max(100) }).parse(req.body);
+    if (input.chapters.some(chapter => chapter.topics.length > 200 || chapter.topics.some(topic => topic.resources.length > 20))) return res.status(400).json({ error: "The outline contains too many topics or links." });
+    if (input.chapters.some(chapter => chapter.topics.some(topic => topic.resources.some(resource => !safeHttpsUrl(resource.externalUrl))))) return res.status(400).json({ error: "Every imported link must be a valid HTTPS URL." });
+    const courseId = String(req.params.id);
+    const totals = input.chapters.reduce((sum, chapter) => chapter.topics.reduce((topicSum, topic) => topic.resources.reduce((resourceSum, resource) => resourceSum + (resource.durationSeconds ?? 0), topicSum), sum), 0);
+    const result = await db.$transaction(async tx => {
+      const course = await tx.course.findUnique({ where: { id: courseId }, select: { id: true } });
+      if (!course) return { error: "Course not found", status: 404 as const };
+      const existing = await tx.chapter.count({ where: { courseId } });
+      if (existing) return { error: "This course already has chapters. Import into a new course draft to avoid duplicate curriculum.", status: 409 as const };
+      let topicCount = 0;
+      let resourceCount = 0;
+      for (const [chapterIndex, chapter] of input.chapters.entries()) {
+        await tx.chapter.create({ data: { courseId, title: chapter.title, slug: chapter.slug, description: "", order: chapterIndex, status: "DRAFT", topics: { create: chapter.topics.map((topic, topicIndex) => {
+          topicCount += 1;
+          resourceCount += topic.resources.length;
+          return { title: topic.title, slug: topic.slug, description: "", objectives: [], order: topicIndex, status: "DRAFT" as const, resources: { create: topic.resources.map((resource, resourceIndex) => ({ title: resource.title, description: "", externalUrl: safeHttpsUrl(resource.externalUrl), type: resource.type, videoProvider: resource.videoProvider, videoId: resource.videoId, durationSeconds: resource.durationSeconds, order: resourceIndex, status: "DRAFT" as const })) } };
+        }) } } });
+      }
+      await tx.course.update({ where: { id: courseId }, data: { estimatedMinutes: Math.ceil(totals / 60), status: "DRAFT", publishedAt: null } });
+      return { chapterCount: input.chapters.length, topicCount, resourceCount };
+    });
+    if ("error" in result) return res.status(result.status).json({ error: result.error });
+    res.status(201).json(result);
+  } catch (e) { next(e); }
+});
 api.post("/admin/courses/:id/chapters", requireAdmin, async (req, res, next) => { try { const input = chapterFields.parse(req.body); const course = await db.course.findUnique({ where: { id: String(req.params.id) }, select: { id: true } }); if (!course) return res.status(404).json({ error: "Course not found" }); const chapter = await db.chapter.create({ data: { ...input, courseId: course.id } }); res.status(201).json(chapter); } catch (e) { next(e); } });
 api.patch("/admin/chapters/:id", requireAdmin, async (req, res, next) => { try { const input = chapterFields.partial().parse(req.body); const chapter = await db.chapter.update({ where: { id: String(req.params.id) }, data: input }); res.json(chapter); } catch (e) { next(e); } });
 api.delete("/admin/chapters/:id", requireAdmin, async (req, res, next) => { try { const chapter = await db.chapter.findUnique({ where: { id: String(req.params.id) }, select: { courseId: true } }); if (!chapter) return res.status(404).json({ error: "Chapter not found" }); await db.chapter.delete({ where: { id: String(req.params.id) } }); await db.course.updateMany({ where: { id: chapter.courseId }, data: { status: "DRAFT", publishedAt: null } }); res.status(204).end(); } catch (e) { next(e); } });

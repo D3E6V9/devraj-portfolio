@@ -66,6 +66,43 @@ paths:
       responses:
         '204': { description: Course deleted }
         '401': { description: Not signed in }
+  /admin/courses/{id}/import-outline:
+    post:
+      summary: Import a structured course outline into an empty course draft
+      description: Creates draft chapters, topics, and HTTPS learning resources atomically. Descriptions are blank; the course stays unpublished.
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [chapters]
+              properties:
+                chapters:
+                  type: array
+                  items:
+                    type: object
+                    required: [title, slug, topics]
+                    properties:
+                      title: { type: string }
+                      slug: { type: string }
+                      topics:
+                        type: array
+                        items:
+                          type: object
+                          required: [title, slug, resources]
+                          properties:
+                            title: { type: string }
+                            slug: { type: string }
+                            resources: { type: array, items: { type: object } }
+      responses:
+        '201': { description: Imported record counts }
+        '400': { description: Invalid outline or non-HTTPS link }
+        '401': { description: Not signed in }
+        '404': { description: Course not found }
+        '409': { description: Course already has chapters }
   /health:
     get:
       summary: Check API and database health
