@@ -1,172 +1,64 @@
-<div align="center">
-<img width="1200" height="475" alt="Nepa Health" src="https://ai.google.dev/static/site-assets/images/share-ais-513315318.png" />
-</div>
+# UpShift
 
-# Nepa Health - Full Stack Mental Wellness Platform
+UpShift is a learning platform starter built from the supplied standalone HTML reference. The reference is preserved as `design-reference.html`. The application uses Next.js App Router, React, TypeScript, Tailwind CSS, Express, PostgreSQL, and Prisma.
 
-A comprehensive mental health and wellness application built with React, Express.js, and MongoDB.
+## Current implementation
 
-## 🏗️ Architecture
+- Responsive branded home, course library, course detail, about, and 404 pages.
+- API-backed published course listing, filtering by search text, and course detail/curriculum display.
+- Relational Prisma models for courses, chapters, topics, resources, assessments, questions, answer options, attempts, admins, and site settings.
+- Public API excludes draft courses and nested draft content, validates search/filter/pagination inputs, and documents response workflows in `docs/openapi.yaml`.
+- Anonymous server-scored assessment API endpoints; pre-submission payloads omit answer keys.
+- Sitemap and robots metadata routes.
+- Signed HTTP-only administrator sessions, password-hashed bootstrap, live dashboard metrics, and protected course draft CRUD.
+- Learner assessment start/submit interface with server-side score calculation and feedback after submission.
+- Safe empty state when the API or database is unavailable; no fabricated video URLs or claims.
+- Repeatable site settings seed that intentionally does not publish demo content.
 
-This is a **full-stack application** with:
-- **Frontend**: React 19 + TypeScript + Vite
-- **Backend**: Express.js + Node.js
-- **Database**: MongoDB + Mongoose
-- **State Management**: Server-side persistence (MongoDB) + React hooks
+The supplied HTML has demonstration-only course data and placeholder resources. This starter does not represent those as verified content. Admin editing currently supports course metadata only; chapter, topic, resource, assessment and question authoring screens/APIs are still missing, so publishing remains guarded. Learners can take an assessment when published records are supplied, but lesson navigation, video embedding and progress tracking are not built. Database-backed integration tests have not been added. The admin area is an initial protected foundation, not a complete production CMS.
 
-## ✨ Features
+## Requirements
 
-- 🏥 **Clinical Services**: Mental health counseling, assessments (PHQ-9, GAD-7, PSS-10)
-- 🛒 **Well-Mart**: E-commerce marketplace for wellness products
-- 📚 **Blog & Resources**: Educational content about mental health
-- 👥 **Testimonials**: Patient success stories
-- 📋 **CRM System**: Contact form submissions and admin dashboard
-- 🔐 **Admin Dashboard**: Manage services, blogs, products, and inquiries
-- 💾 **Data Persistence**: All data stored in MongoDB
+- Node.js 20 or later
+- PostgreSQL 15 or later
 
-## 🚀 Quick Start
+## Local setup
 
-### Prerequisites
-- Node.js 16+ 
-- MongoDB (running locally or cloud connection)
-- npm or yarn
+1. Copy `.env.example` to `.env` and set `DATABASE_URL` to a local PostgreSQL database.
+2. Install packages with `npm install`.
+3. Generate Prisma Client with `npm run db:generate`.
+4. Apply the schema with `npm run db:migrate`.
+5. Set `ADMIN_BOOTSTRAP_EMAIL`, `ADMIN_BOOTSTRAP_PASSWORD` (at least 14 characters), and a random `SESSION_SECRET` (at least 32 characters) in `.env`; initialize site settings and the first admin with `npm run db:seed`. Keep bootstrap credentials private and remove them from runtime configuration after the first seed.
+6. Start frontend and API with `npm run dev`.
 
-### Installation
+The site runs at `http://localhost:3000`, and the API is at `http://localhost:4000/api/v1`. Admin sign-in is at `/admin`. `NEXT_PUBLIC_API_BASE_URL` is browser-visible configuration and must contain only the public API base URL. Database credentials, bootstrap credentials, and session secrets must remain server-side.
 
-```bash
-# Install dependencies
-npm install
+## Data model
 
-# Configure environment variables
-# .env file is already created with defaults
-```
+Prisma defines Course → Chapter → Topic → LearningResource, plus Assessment → Question → AnswerOption and persisted AssessmentAttempt records. Publication state is explicit at each content level. Course deletion cascades to its curriculum and assessment history; the admin UI confirms the destructive action.
 
-### Running the Application
+## Deployment
 
-**Development Mode (Recommended):**
-```bash
-npm run dev
-```
-This runs both the React frontend (port 3000) and Express backend (port 3001) concurrently.
+`render.yaml` describes a PostgreSQL database and separate web/API services. In Render:
 
-**Frontend only:**
-```bash
-npm run dev:client
-```
+1. Push this repository to GitHub and create a Blueprint from the repository.
+2. Set `FRONTEND_URL` on the API to the deployed web URL and use a strong `SESSION_SECRET` (the Blueprint generates one).
+3. Set `NEXT_PUBLIC_API_BASE_URL` on the web service to `https://<api-host>/api/v1`.
+4. Set `YOUTUBE_CHANNEL_URL` to the real channel URL, or leave it blank.
+5. Deploy the API, then the frontend. The API start command applies checked-in Prisma migrations. Set bootstrap email/password as Render secrets, open the API service Shell once to run `npm run db:seed`, then remove the bootstrap variables.
 
-**Backend only:**
-```bash
-npm run dev:server
-```
+The initial schema and migration are checked in under `prisma/`. No production credentials belong in Git. Before treating this as a production launch, complete chapter/topic/resource/assessment authoring, add learner lesson/assessment pages, add automated API/UI integration tests, and review the deployment settings.
 
-**Production Build:**
-```bash
-npm run build
-npm run start
-```
+## Scripts
 
-## 📁 Project Structure
+- `npm run dev` — run web and API together.
+- `npm run build` — build both services.
+- `npm run lint` — lint frontend and API sources.
+- `npm run typecheck` — type-check both projects.
+- `npm run db:generate` — generate Prisma Client.
+- `npm run db:migrate` — create/apply a development migration.
+- `npm run db:seed` — initialize repeatable site settings.
 
-```
-nepa-health/
-├── src/                          # React Frontend
-│   ├── components/               # React components
-│   ├── App.tsx                   # Main app with API integration
-│   ├── types.ts                  # TypeScript interfaces
-│   └── data.ts                   # Initial data & constants
-│
-├── server/                       # Express Backend
-│   ├── index.ts                  # Main Express server
-│   ├── db.ts                     # MongoDB connection
-│   ├── seed.ts                   # Database seeding
-│   └── models/                   # Mongoose schemas
-│       ├── Service.ts
-│       ├── BlogPost.ts
-│       ├── Product.ts
-│       ├── Testimonial.ts
-│       ├── Submission.ts
-│       └── AssessmentResult.ts
-│
-├── dist/                         # Production build output
-├── .env                          # Environment configuration
-├── package.json                  # Dependencies & scripts
-└── tsconfig.json                 # TypeScript configuration
-```
+## License
 
-## 🔌 API Endpoints
-
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| GET | `/api/services` | Fetch all services |
-| PUT | `/api/services/:id` | Update service |
-| GET | `/api/blogs` | Fetch all blogs |
-| POST | `/api/blogs` | Create blog |
-| PUT | `/api/blogs/:id` | Update blog |
-| DELETE | `/api/blogs/:id` | Delete blog |
-| GET | `/api/products` | Fetch all products |
-| POST | `/api/products` | Create product |
-| PUT | `/api/products/:id` | Update product |
-| DELETE | `/api/products/:id` | Delete product |
-| GET | `/api/testimonials` | Fetch testimonials |
-| POST | `/api/testimonials` | Create testimonial |
-| DELETE | `/api/testimonials/:id` | Delete testimonial |
-| GET | `/api/submissions` | Fetch contact submissions |
-| POST | `/api/submissions` | Create submission |
-| PATCH | `/api/submissions/:id` | Update submission status |
-| DELETE | `/api/submissions/:id` | Delete submission |
-| GET | `/api/assessments` | Fetch assessment results |
-| POST | `/api/assessments` | Create assessment result |
-
-## ⚙️ Configuration
-
-Edit `.env` to configure:
-
-```env
-MONGODB_URI=mongodb://localhost:27017/nepa_health
-PORT=3001
-NODE_ENV=development
-VITE_API_URL=http://localhost:3001
-```
-
-## 🗄️ Database
-
-The application uses MongoDB with Mongoose for data persistence. On first launch, the database is automatically seeded with:
-- Initial services, products, and testimonials
-- Sample blog posts and content
-- Example contact submissions
-- Assessment results for dashboard metrics
-
-## 📝 Scripts
-
-- `npm run dev` - Run development server (frontend + backend)
-- `npm run dev:client` - Run React frontend only
-- `npm run dev:server` - Run Express backend only
-- `npm run build` - Build for production
-- `npm run preview` - Preview production build
-- `npm run start` - Start production server
-- `npm run lint` - Run TypeScript type checking
-- `npm run clean` - Clean build artifacts
-
-## 🔗 Related Resources
-
-- **Full Migration Guide**: See [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md)
-- **React Documentation**: https://react.dev/
-- **Express.js Guide**: https://expressjs.com/
-- **MongoDB Docs**: https://docs.mongodb.com/
-- **TypeScript Handbook**: https://www.typescriptlang.org/docs/
-
-## 📞 Support
-
-For detailed setup instructions and troubleshooting, refer to [MIGRATION_GUIDE.md](MIGRATION_GUIDE.md).
-
-## ✅ Build Status
-
-- TypeScript Compilation: ✓ PASS
-- Vite Frontend Build: ✓ PASS  
-- Express Backend: ✓ FUNCTIONAL
-- MongoDB Integration: ✓ COMPLETE
-- API Routes: ✓ ALL WORKING
-
----
-
-**Ready for deployment!** 🚀
+No license is asserted. Choose a license only after confirming ownership and intended reuse terms.

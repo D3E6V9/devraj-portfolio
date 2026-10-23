@@ -1,0 +1,144 @@
+openapi: 3.1.0
+info:
+  title: UpShift API
+  version: 1.0.0
+  description: Public course and anonymous assessment API.
+servers:
+  - url: http://localhost:4000/api/v1
+paths:
+  /admin/auth/login:
+    post:
+      summary: Start an administrator session
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [email, password]
+              properties:
+                email: { type: string, format: email }
+                password: { type: string }
+      responses:
+        '200': { description: Signed HTTP-only session cookie created }
+        '401': { description: Invalid credentials }
+  /admin/auth/logout:
+    post:
+      summary: End the administrator session
+      responses:
+        '200': { description: Session cookie cleared }
+  /admin/auth/me:
+    get:
+      summary: Check current administrator session
+      responses:
+        '200': { description: Current administrator }
+        '401': { description: Not signed in }
+  /admin/dashboard:
+    get:
+      summary: Read live admin dashboard metrics
+      responses:
+        '200': { description: Database-derived content and attempt totals }
+        '401': { description: Not signed in }
+  /admin/courses:
+    get:
+      summary: List all courses for administrators
+      responses:
+        '200': { description: Draft and published course metadata }
+        '401': { description: Not signed in }
+    post:
+      summary: Create a course draft
+      responses:
+        '201': { description: Course created }
+        '401': { description: Not signed in }
+  /admin/courses/{id}:
+    patch:
+      summary: Update a course or change publication state
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Course updated }
+        '401': { description: Not signed in }
+        '422': { description: Publication prerequisites are incomplete }
+    delete:
+      summary: Delete a course and its related records
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      responses:
+        '204': { description: Course deleted }
+        '401': { description: Not signed in }
+  /health:
+    get:
+      summary: Check API and database health
+      responses:
+        '200': { description: Available }
+        '503': { description: Database unavailable }
+  /courses:
+    get:
+      summary: List published courses
+      parameters:
+        - { in: query, name: q, schema: { type: string } }
+        - { in: query, name: category, schema: { type: string } }
+        - { in: query, name: difficulty, schema: { type: string, enum: [BEGINNER, INTERMEDIATE, ADVANCED] } }
+        - { in: query, name: page, schema: { type: integer, minimum: 1 } }
+        - { in: query, name: limit, schema: { type: integer, minimum: 1, maximum: 30 } }
+      responses:
+        '200': { description: Paginated published courses }
+  /courses/{slug}:
+    get:
+      summary: Get a published course and its published curriculum
+      parameters:
+        - { in: path, name: slug, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Course detail }
+        '404': { description: Course not found }
+  /courses/{slug}/assessment:
+    get:
+      summary: Get public assessment questions without answer keys
+      parameters:
+        - { in: path, name: slug, required: true, schema: { type: string } }
+      responses:
+        '200': { description: Published assessment }
+        '404': { description: Assessment not found }
+  /assessments/{id}/attempts:
+    post:
+      summary: Start a learner assessment attempt
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learnerToken]
+              properties:
+                learnerToken: { type: string, format: uuid }
+      responses:
+        '201': { description: Attempt started }
+        '429': { description: Attempt limit reached }
+  /attempts/{id}/submit:
+    post:
+      summary: Submit answers and receive server-calculated results
+      parameters:
+        - { in: path, name: id, required: true, schema: { type: string } }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [learnerToken, answers]
+              properties:
+                learnerToken: { type: string, format: uuid }
+                answers:
+                  type: array
+                  items:
+                    type: object
+                    required: [questionId, optionId]
+                    properties:
+                      questionId: { type: string }
+                      optionId: { type: string }
+      responses:
+        '200': { description: Score, pass/fail, and post-submission feedback }
+        '409': { description: Attempt expired or already submitted }
+        '400': { description: Invalid answer selection }
