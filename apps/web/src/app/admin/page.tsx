@@ -9,7 +9,7 @@ type ResourceType = "VIDEO" | "ARTICLE" | "LINK";
 type Resource = { id: string; title: string; description: string; type: ResourceType; externalUrl: string; durationSeconds: number | null; status: Status };
 type Topic = { id: string; title: string; slug: string; description: string; objectives: string[]; order: number; status: Status; resources: Resource[] };
 type Chapter = { id: string; title: string; slug: string; description: string; order: number; status: Status; topics: Topic[] };
-type Course = { id: string; title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; featured: boolean; status: Status; objectives: string[]; audience: string; chapters?: Chapter[] };
+type Course = { id: string; title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; featured: boolean; status: Status; objectives: string[]; audience: string; chapters?: Chapter[]; _count?: { chapters: number } };
 type Metrics = { courses: number; publishedCourses: number; draftCourses: number; chapters: number; topics: number; resources: number; publishedAssessments: number; submittedAttempts: number };
 type CourseDraft = { title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; objectivesText: string; audience: string };
 type ChapterDraft = { title: string; slug: string; description: string; order: number };
@@ -205,7 +205,7 @@ export default function AdminPage() {
           {courses.map((course) => <article key={course.id} style={{ ...cardStyle, margin: 0 }}>
             <div style={{ ...actionRow, justifyContent: "space-between" }}><span className="pill">{course.status === "PUBLISHED" ? "Published" : "Draft"}</span><span className="muted">{course.category}</span></div>
             <h3 style={{ margin: "16px 0 7px" }}>{course.title}</h3><p className="muted">{course.shortDescription}</p>
-            <p className="muted" style={{ fontSize: 14 }}>{course.chapters?.length ?? 0} chapters · {course.slug}</p>
+            <p className="muted" style={{ fontSize: 14 }}>{course._count?.chapters ?? 0} chapters · {course.slug}</p>
             <button className="btn btn-primary" onClick={() => { setError(""); setNotice(""); void loadCourse(course.id); }}>Manage course</button>
             <button className="btn" style={{ marginLeft: 8 }} onClick={() => void remove(`/admin/courses/${course.id}`, "course")}>Delete</button>
           </article>)}

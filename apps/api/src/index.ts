@@ -74,7 +74,7 @@ api.get("/admin/dashboard", requireAdmin, async (_req, res, next) => {
     res.json({ courses, publishedCourses, draftCourses: courses - publishedCourses, chapters, topics, resources, publishedAssessments: assessments, submittedAttempts: attempts, averagePercent: aggregates._avg.percent });
   } catch (e) { next(e); }
 });
-api.get("/admin/courses", requireAdmin, async (_req, res, next) => { try { res.json(await db.course.findMany({ orderBy: { updatedAt: "desc" } })); } catch (e) { next(e); } });
+api.get("/admin/courses", requireAdmin, async (_req, res, next) => { try { res.json(await db.course.findMany({ orderBy: { updatedAt: "desc" }, include: { _count: { select: { chapters: true } } } })); } catch (e) { next(e); } });
 api.get("/admin/courses/:id", requireAdmin, async (req, res, next) => {
   try {
     const course = await db.course.findUnique({
