@@ -7,7 +7,7 @@ services:
   - type: web
     name: upshift-api
     runtime: node
-    buildCommand: npm install && npx prisma generate && npm run build:api
+    buildCommand: npm install --include=dev && npx prisma generate && npm run build:api
     startCommand: npx prisma migrate deploy && npm run start:api
     envVars:
       - key: NODE_ENV
@@ -27,7 +27,7 @@ services:
   - type: web
     name: upshift-web
     runtime: node
-    buildCommand: npm install && npm run build:web
+    buildCommand: npm install --include=dev && npm run build:web
     startCommand: npm run start:web
     envVars:
       - key: NEXT_PUBLIC_API_BASE_URL
