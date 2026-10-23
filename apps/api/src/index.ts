@@ -153,13 +153,14 @@ api.get("/admin/dashboard", requireAdmin, async (_req, res, next) => {
   try {
     const today = utcDay();
     const weekAgo = new Date(today.getTime() - 6 * 24 * 60 * 60 * 1000);
+    const twoWeeksAgo = new Date(today.getTime() - 13 * 24 * 60 * 60 * 1000);
     const [courses, publishedCourses, chapters, topics, resources, assessments, attempts, aggregates, totalPageViews, todayPageViews, dailyViews, topPages] = await Promise.all([
       db.course.count(), db.course.count({ where: { status: "PUBLISHED" } }), db.chapter.count(), db.topic.count(), db.learningResource.count(), db.assessment.count({ where: { status: "PUBLISHED" } }), db.assessmentAttempt.count({ where: { submittedAt: { not: null } } }), db.assessmentAttempt.aggregate({ where: { submittedAt: { not: null } }, _avg: { percent: true } }),
       db.pageView.count(), db.pageView.count({ where: { day: today } }),
-      db.pageView.groupBy({ by: ["day"], where: { day: { gte: weekAgo } }, _count: { _all: true }, orderBy: { day: "asc" } }),
+      db.pageView.groupBy({ by: ["day"], where: { day: { gte: twoWeeksAgo } }, _count: { _all: true }, orderBy: { day: "asc" } }),
       db.pageView.groupBy({ by: ["path"], _count: { _all: true }, orderBy: { _count: { path: "desc" } }, take: 5 }),
     ]);
-    res.json({ courses, publishedCourses, draftCourses: courses - publishedCourses, chapters, topics, resources, publishedAssessments: assessments, submittedAttempts: attempts, averagePercent: aggregates._avg.percent, traffic: { totalPageViews, todayPageViews, last7Days: dailyViews.reduce((sum, row) => sum + row._count._all, 0), dailyViews: dailyViews.map(row => ({ day: row.day, count: row._count._all })), topPages: topPages.map(row => ({ path: row.path, count: row._count._all })) } });
+    res.json({ courses, publishedCourses, draftCourses: courses - publishedCourses, chapters, topics, resources, publishedAssessments: assessments, submittedAttempts: attempts, averagePercent: aggregates._avg.percent, traffic: { totalPageViews, todayPageViews, last7Days: dailyViews.filter(row => row.day >= weekAgo).reduce((sum, row) => sum + row._count._all, 0), dailyViews: dailyViews.map(row => ({ day: row.day, count: row._count._all })), topPages: topPages.map(row => ({ path: row.path, count: row._count._all })) } });
   } catch (e) { next(e); }
 });
 api.get("/admin/courses", requireAdmin, async (_req, res, next) => { try { res.json(await db.course.findMany({ orderBy: { updatedAt: "desc" }, include: { _count: { select: { chapters: true } } } })); } catch (e) { next(e); } });

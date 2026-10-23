@@ -12,6 +12,7 @@ type Topic = { id: string; title: string; slug: string; description: string; obj
 type Chapter = { id: string; title: string; slug: string; description: string; order: number; status: Status; viewCount: number; likeCount: number; topics: Topic[] };
 type Course = { id: string; title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; featured: boolean; thumbnailUrl: string | null; viewCount: number; likeCount: number; status: Status; objectives: string[]; audience: string; chapters?: Chapter[]; _count?: { chapters: number } };
 type Metrics = { courses: number; publishedCourses: number; draftCourses: number; chapters: number; topics: number; resources: number; publishedAssessments: number; submittedAttempts: number; traffic: { totalPageViews: number; todayPageViews: number; last7Days: number; dailyViews: { day: string; count: number }[]; topPages: { path: string; count: number }[] } };
+type DailyTrafficPoint = { day: string; count: number };
 type CourseDraft = { title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; objectivesText: string; audience: string; thumbnailUrl: string };
 type ChapterDraft = { title: string; slug: string; description: string; order: number };
 type TopicDraft = { title: string; slug: string; description: string; objectivesText: string; order: number; linkTitle: string; linkDescription: string; linkType: ResourceType; linkUrl: string; durationMinutes: number };
@@ -33,6 +34,38 @@ function uniqueSlug(value: string, used: Set<string>) {
   while (used.has(candidate)) candidate = `${base}-${suffix++}`;
   used.add(candidate);
   return candidate;
+}
+function DailyTrafficChart({ rows }: { rows: DailyTrafficPoint[] }) {
+  const today = new Date();
+  today.setUTCHours(0, 0, 0, 0);
+  const counts = new Map(rows.map(row => [new Date(row.day).toISOString().slice(0, 10), row.count]));
+  const points = Array.from({ length: 14 }, (_, index) => {
+    const day = new Date(today.getTime() - (13 - index) * 86_400_000).toISOString().slice(0, 10);
+    return { day, count: counts.get(day) || 0 };
+  });
+  const total = points.reduce((sum, point) => sum + point.count, 0);
+  const peak = Math.max(...points.map(point => point.count), 1);
+  const currentWeek = points.slice(-7).reduce((sum, point) => sum + point.count, 0);
+  const previousWeek = points.slice(0, 7).reduce((sum, point) => sum + point.count, 0);
+  const change = previousWeek === 0 ? null : Math.round(((currentWeek - previousWeek) / previousWeek) * 100);
+  const chartPoints = points.map((point, index) => ({ ...point, x: 42 + index * (636 / 13), y: 176 - (point.count / peak) * 138 }));
+  const line = chartPoints.map(point => `${point.x},${point.y}`).join(" ");
+  const area = `42,176 ${line} 678,176`;
+  const labelIndexes = [0, 3, 6, 9, 13];
+  const dayLabel = (day: string) => new Date(`${day}T00:00:00`).toLocaleDateString(undefined, { month: "short", day: "numeric", timeZone: "UTC" });
+  return <section className="traffic-insight" aria-labelledby="daily-traffic-title">
+    <div className="traffic-chart-heading"><div><h3 id="daily-traffic-title">Daily visits</h3><p className="muted">Page visits over the last 14 days</p></div><div className="traffic-trend"><span className="traffic-trend-dot"/>Last 7 days {change === null ? "· new data" : `${change >= 0 ? "↑" : "↓"} ${Math.abs(change)}% vs previous 7`}</div></div>
+    {total ? <>
+      <svg className="traffic-chart" viewBox="0 0 720 220" role="img" aria-label={`Daily page visits over 14 days. ${total} total visits, peak ${peak} in one day.`}>
+        <defs><linearGradient id="trafficArea" x1="0" x2="0" y1="0" y2="1"><stop offset="0%" stopColor="#C4F56A" stopOpacity=".32"/><stop offset="100%" stopColor="#79E9C5" stopOpacity=".015"/></linearGradient><linearGradient id="trafficStroke" x1="0" x2="1" y1="0" y2="0"><stop offset="0%" stopColor="#79E9C5"/><stop offset="100%" stopColor="#C4F56A"/></linearGradient></defs>
+        {[0, Math.ceil(peak / 2), peak].filter((value, index, values) => values.indexOf(value) === index).map(value => { const y = 176 - (value / peak) * 138; return <g key={value}><line x1="42" y1={y} x2="678" y2={y} stroke="rgba(157,177,192,.13)" strokeDasharray="3 6"/><text x="29" y={y + 4} textAnchor="end" fill="#82909f" fontSize="10">{value}</text></g>; })}
+        <polygon points={area} fill="url(#trafficArea)"/><polyline points={line} fill="none" stroke="url(#trafficStroke)" strokeWidth="3" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke"/>
+        {chartPoints.map(point => <g key={point.day}><circle cx={point.x} cy={point.y} r="4" fill="#C4F56A" stroke="#101720" strokeWidth="2" vectorEffect="non-scaling-stroke"/><title>{dayLabel(point.day)}: {point.count} page visits</title></g>)}
+        {labelIndexes.map(index => <text key={points[index].day} x={chartPoints[index].x} y="204" textAnchor={index === 0 ? "start" : index === 13 ? "end" : "middle"} fill="#9aa7b3" fontSize="11">{dayLabel(points[index].day)}</text>)}
+      </svg>
+      <div className="traffic-chart-foot"><span>{total.toLocaleString()} page visits in this period</span><span>Peak day: {peak.toLocaleString()}</span></div>
+    </> : <div className="traffic-empty"><strong>Your traffic trend will appear here</strong><span>Once visitors arrive, this chart will show daily activity for the last 14 days.</span></div>}
+  </section>;
 }
 function youtubeId(value: string) {
   try {
@@ -297,15 +330,18 @@ export default function AdminPage() {
         {metrics && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 12, margin: "24px 0 40px" }}>
           {[["Courses", metrics.courses], ["Published", metrics.publishedCourses], ["Drafts", metrics.draftCourses], ["Chapters", metrics.chapters], ["Topics", metrics.topics], ["Links", metrics.resources]].map(([name, count]) => <div className="note" key={String(name)}><div className="muted">{name}</div><strong style={{ fontSize: 25 }}>{count}</strong></div>)}
         </div>}
-        {metrics && <section className="note" style={{ margin: "-20px 0 36px" }}>
-          <div style={{ display: "flex", justifyContent: "space-between", gap: 16, flexWrap: "wrap", alignItems: "baseline" }}><div><div className="eyebrow">Audience</div><h2 style={{ margin: "4px 0" }}>Site traffic</h2></div><span className="muted">Counts are unique visitors per page each day.</span></div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(150px,1fr))", gap: 12, marginTop: 16 }}>
-            {[["Today", metrics.traffic.todayPageViews], ["Last 7 days", metrics.traffic.last7Days], ["All time", metrics.traffic.totalPageViews]].map(([label, count]) => <div className="notice" key={String(label)}><div className="muted">{label}</div><strong style={{ fontSize: 24 }}>{Number(count).toLocaleString()}</strong></div>)}
+        {metrics && <section className="note traffic-dashboard" style={{ margin: "-20px 0 36px" }}>
+          <div className="traffic-dashboard-heading"><div><div className="eyebrow">Audience</div><h2 style={{ margin: "4px 0 6px" }}>Site traffic</h2><p className="muted">A quick read on your learning community and what they explore.</p></div><span className="traffic-definition">Page visits count each visitor once per page, per day.</span></div>
+          <div className="traffic-kpis">
+            {[ ["Today", metrics.traffic.todayPageViews], ["Last 7 days", metrics.traffic.last7Days], ["All time", metrics.traffic.totalPageViews] ].map(([label, count], index) => <div className={`traffic-kpi traffic-kpi-${index + 1}`} key={String(label)}><span>{label}</span><strong>{Number(count).toLocaleString()}</strong><small>page visits</small></div>)}
           </div>
-          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(min(100%,280px),1fr))", gap: 24, marginTop: 20 }}>
-            <div><h3>Daily visits</h3>{metrics.traffic.dailyViews.length ? metrics.traffic.dailyViews.map((row) => <div key={row.day} style={{ display: "flex", justifyContent: "space-between", borderBottom: "1px solid var(--bd)", padding: "6px 0" }}><span className="muted">{new Date(row.day).toLocaleDateString()}</span><strong>{row.count}</strong></div>) : <p className="muted">Traffic will appear as visitors browse the site.</p>}</div>
-            <div><h3>Popular pages</h3>{metrics.traffic.topPages.length ? metrics.traffic.topPages.map((row) => <div key={row.path} style={{ display: "flex", justifyContent: "space-between", gap: 16, borderBottom: "1px solid var(--bd)", padding: "6px 0" }}><span className="muted" style={{ overflowWrap: "anywhere" }}>{row.path}</span><strong>{row.count}</strong></div>) : <p className="muted">No page visits yet.</p>}</div>
+          <div className="traffic-main-grid"><DailyTrafficChart rows={metrics.traffic.dailyViews}/>
+            <section className="popular-pages"><div><h3>Popular pages</h3><p className="muted">All-time page visits</p></div>{metrics.traffic.topPages.length ? <ol>{metrics.traffic.topPages.map((row, index) => { const max = metrics.traffic.topPages[0]?.count || 1; const percent = Math.max(4, (row.count / max) * 100); return <li key={row.path}><div className="popular-page-label"><span><i>{String(index + 1).padStart(2, "0")}</i>{row.path === "/" ? "Home" : row.path}</span><strong>{row.count}</strong></div><div className="popular-page-track"><span style={{ width: `${percent}%` }}/></div></li>; })}</ol> : <p className="muted">Page visits will appear here as learners explore.</p>}</section>
           </div>
+          <section className="course-activity"><div className="course-activity-heading"><div><h3>Course engagement</h3><p className="muted">Which published courses are attracting learners?</p></div><span className="course-activity-legend"><i/> Views <i className="likes-key"/> Likes</span></div>
+            {courses.filter(course => course.status === "PUBLISHED").sort((a, b) => b.viewCount - a.viewCount).slice(0, 4).length ? <div className="course-activity-list">{courses.filter(course => course.status === "PUBLISHED").sort((a, b) => b.viewCount - a.viewCount).slice(0, 4).map((course, index, ranked) => { const max = ranked[0]?.viewCount || 1; const width = Math.max(course.viewCount ? 5 : 0, (course.viewCount / max) * 100); return <div className="course-activity-row" key={course.id}><span className="course-activity-rank">{String(index + 1).padStart(2, "0")}</span><div className="course-activity-info"><div className="course-activity-label"><strong>{course.title}</strong><span>{course.viewCount.toLocaleString()} views <b>·</b> {course.likeCount.toLocaleString()} likes</span></div><div className="course-activity-track"><span style={{ width: `${width}%` }}/></div></div></div>; })}</div> : <p className="muted">Publish a course to start seeing its views and likes here.</p>}
+          </section>
+          <p className="traffic-footnote">These counts are page visits, not total people. A learner can visit several pages in one day.</p>
         </section>}
         <div style={{ ...actionRow, justifyContent: "space-between" }}><h2 style={{ margin: 0 }}>Your courses</h2><button className="btn btn-primary" onClick={() => { setCourseDraft(blankCourse); setCourseEditor("new"); setError(""); setNotice(""); }}>Create a course</button></div>
         {courseEditor === "new" && <section style={cardStyle}>
