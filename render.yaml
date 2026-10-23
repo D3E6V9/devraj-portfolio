@@ -1,14 +1,17 @@
 databases:
   - name: upshift-db
     plan: free
+    region: singapore
     databaseName: upshift
     user: upshift
 services:
   - type: web
     name: upshift-api
     runtime: node
+    plan: free
+    region: singapore
     buildCommand: npm install --include=dev && npx prisma generate && npm run build:api
-    startCommand: npx prisma migrate deploy && npm run start:api
+    startCommand: npx prisma migrate deploy && npm run db:seed && npm run start:api
     envVars:
       - key: NODE_ENV
         value: production
@@ -27,6 +30,8 @@ services:
   - type: web
     name: upshift-web
     runtime: node
+    plan: free
+    region: singapore
     buildCommand: npm install --include=dev && npm run build:web
     startCommand: npm run start:web
     envVars:
