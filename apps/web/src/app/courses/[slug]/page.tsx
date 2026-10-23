@@ -46,7 +46,7 @@ function LearningResourceView({ resource, topicTitle }: { resource: LearningReso
           Your browser does not support inline video. <a href={resource.externalUrl}>Open the video</a>.
         </video>
       ) : playable?.kind === "embed" ? (
-        <div style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", borderRadius: 12, background: "#000", marginTop: 10 }}>
+        <div className="lesson-player" style={{ position: "relative", width: "100%", aspectRatio: "16 / 9", overflow: "hidden", borderRadius: 12, background: "#000", marginTop: 10 }}>
           <iframe src={playerSrc} title={resource.title || topicTitle} loading="lazy" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" allowFullScreen referrerPolicy="strict-origin-when-cross-origin" style={{ position: "absolute", inset: 0, width: "100%", height: "100%", border: 0 }} />
         </div>
       ) : (

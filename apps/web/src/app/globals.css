@@ -53,3 +53,13 @@
 @keyframes topic-reveal{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:760px){.topic-map{grid-template-columns:1fr;padding:16px}.topic-map::before{left:32px}.chapter>summary{padding:18px 16px 16px 50px}.chapter>summary::before{left:17px;top:21px}}
 @media(prefers-reduced-motion:reduce){.chapter,.topic-node,.topic-node-chevron{transition:none}.topic-node-content{animation:none}}
+/* Expanded lessons use the full learning-map width for comfortable viewing. */
+.curriculum{grid-template-columns:minmax(0,1fr);gap:26px}
+.curriculum>aside.note{width:100%;margin-top:0}
+.topic-node[open]{grid-column:1/-1;transform:none;border-color:rgba(196,245,106,.55);box-shadow:0 18px 42px rgba(0,0,0,.28),0 0 30px rgba(123,238,202,.12)}
+.topic-node[open]>summary{min-height:82px;padding:17px 20px}
+.topic-node[open] .topic-node-content{padding:20px clamp(16px,3vw,34px) 30px}
+.topic-node-content>p{font-size:16px;line-height:1.75;max-width:78ch}
+.topic-node-content .lesson-player{width:100%;margin-top:20px!important;border-radius:16px!important;box-shadow:0 18px 46px rgba(0,0,0,.32),0 0 26px rgba(123,238,202,.1)}
+.topic-node-content video{width:100%;max-height: min(72vh, 760px)!important;aspect-ratio:16/9;object-fit:contain;box-shadow:0 18px 46px rgba(0,0,0,.32)}
+@media(max-width:760px){.topic-node[open]{grid-column:1}.topic-node[open] .topic-node-content{padding:16px 12px 20px}.topic-node-content .lesson-player{border-radius:12px!important}}
