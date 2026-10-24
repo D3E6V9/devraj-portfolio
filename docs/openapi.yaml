@@ -6,6 +6,36 @@ info:
 servers:
   - url: http://localhost:4000/api/v1
 paths:
+  /homepage-videos:
+    get:
+      summary: Read the homepage featured YouTube playlist
+      responses:
+        '200': { description: Up to three ordered videos for the homepage player }
+  /admin/homepage-videos:
+    get:
+      summary: Read the featured homepage video playlist
+      responses:
+        '200': { description: Up to three ordered HTTPS YouTube links }
+        '401': { description: Not signed in }
+    put:
+      summary: Replace the featured homepage video playlist
+      description: Accepts up to three unique HTTPS YouTube links. An empty list hides the player.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [urls]
+              properties:
+                urls:
+                  type: array
+                  maxItems: 3
+                  items: { type: string, format: uri }
+      responses:
+        '200': { description: Playlist saved }
+        '401': { description: Not signed in }
+        '422': { description: Invalid or duplicate video link }
   /admin/auth/login:
     post:
       summary: Start an administrator session

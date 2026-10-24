@@ -30,6 +30,31 @@ function sessionAdmin(req: express.Request): string | null {
 const requireAdmin: RequestHandler = (req, res, next) => { if (!sessionAdmin(req)) return res.status(401).json({ error: "Administrator login required" }); next(); };
 const cookieOptions = `Path=/; HttpOnly; SameSite=Lax; Max-Age=28800${process.env.NODE_ENV === "production" ? "; Secure" : ""}`;
 function safeHttpsUrl(value: string) { try { const url = new URL(value); return url.protocol === "https:" && !url.username && !url.password ? url.toString() : ""; } catch { return ""; } }
+function youtubeVideoId(value: string) {
+  try {
+    const url = new URL(value);
+    const host = url.hostname.toLowerCase().replace(/^www\./, "");
+    const id = host === "youtu.be" ? url.pathname.split("/").filter(Boolean)[0]
+      : host === "youtube.com" || host === "m.youtube.com" || host === "youtube-nocookie.com"
+        ? url.searchParams.get("v") || url.pathname.match(/^\/(?:embed|shorts|live)\/([^/?]+)/)?.[1]
+        : null;
+    return url.protocol === "https:" && id && /^[\w-]{6,20}$/.test(id) ? id : null;
+  } catch { return null; }
+}
+type HomepageVideo = { url: string; videoId: string };
+function parseHomepageVideos(value: string | undefined): HomepageVideo[] {
+  try {
+    const rows: unknown = JSON.parse(value || "[]");
+    if (!Array.isArray(rows)) return [];
+    return rows.flatMap((row: unknown) => {
+      if (!row || typeof row !== "object" || !("url" in row) || typeof row.url !== "string") return [];
+      const url = safeHttpsUrl(row.url);
+      const videoId = youtubeVideoId(url);
+      return url && videoId ? [{ url, videoId }] : [];
+    }).slice(0, 3);
+  } catch { return []; }
+}
+const homepageVideoUrls = z.array(z.string().url().max(2000)).max(3).refine(urls => urls.every(url => Boolean(youtubeVideoId(url))), "Use HTTPS links to YouTube videos.").refine(urls => new Set(urls.map(url => youtubeVideoId(url))).size === urls.length, "Each video can only be added once.");
 const courseFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), shortDescription: z.string().min(10).max(280), description: z.string().max(10000).optional(), category: z.string().min(2).max(60), difficulty: z.enum(["BEGINNER", "INTERMEDIATE", "ADVANCED"]).default("BEGINNER"), objectives: z.array(z.string().max(250)).max(20).default([]), audience: z.string().max(500).optional(), thumbnailUrl: z.string().url().refine(value => new URL(value).protocol === "https:", "Image links must use HTTPS").optional().or(z.literal("")), estimatedMinutes: z.number().int().nonnegative().default(0), featured: z.boolean().default(false), status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"), seoTitle: z.string().max(120).optional(), seoDescription: z.string().max(300).optional() });
 const chapterFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(5000).default(""), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
 const topicFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(10000).default(""), objectives: z.array(z.string().max(250)).max(20).default([]), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
@@ -43,6 +68,26 @@ async function publishReady(id: string) {
 api.get("/health", async (_req, res) => {
   try { await db.$queryRaw`SELECT 1`; res.json({ ok: true, database: "connected" }); }
   catch { res.status(503).json({ ok: false, database: "unavailable" }); }
+});
+api.get("/homepage-videos", async (_req, res, next) => {
+  try {
+    const setting = await db.siteSetting.findUnique({ where: { key: "homepageVideos" }, select: { value: true } });
+    res.json({ videos: parseHomepageVideos(setting?.value) });
+  } catch (e) { next(e); }
+});
+api.get("/admin/homepage-videos", requireAdmin, async (_req, res, next) => {
+  try {
+    const setting = await db.siteSetting.findUnique({ where: { key: "homepageVideos" }, select: { value: true } });
+    res.json({ videos: parseHomepageVideos(setting?.value) });
+  } catch (e) { next(e); }
+});
+api.put("/admin/homepage-videos", requireAdmin, async (req, res, next) => {
+  try {
+    const input = z.object({ urls: homepageVideoUrls }).parse(req.body);
+    const videos = input.urls.map(url => ({ url: safeHttpsUrl(url), videoId: youtubeVideoId(url) as string }));
+    await db.siteSetting.upsert({ where: { key: "homepageVideos" }, update: { value: JSON.stringify(videos) }, create: { key: "homepageVideos", value: JSON.stringify(videos) } });
+    res.json({ videos });
+  } catch (e) { next(e); }
 });
 api.post("/admin/auth/login", async (req, res, next) => {
   try {

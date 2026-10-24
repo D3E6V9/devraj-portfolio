@@ -12,6 +12,7 @@ type Topic = { id: string; title: string; slug: string; description: string; obj
 type Chapter = { id: string; title: string; slug: string; description: string; order: number; status: Status; viewCount: number; likeCount: number; topics: Topic[] };
 type Course = { id: string; title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; featured: boolean; thumbnailUrl: string | null; viewCount: number; likeCount: number; status: Status; objectives: string[]; audience: string; chapters?: Chapter[]; _count?: { chapters: number } };
 type Metrics = { courses: number; publishedCourses: number; draftCourses: number; chapters: number; topics: number; resources: number; publishedAssessments: number; submittedAttempts: number; traffic: { totalPageViews: number; todayPageViews: number; last7Days: number; dailyViews: { day: string; count: number }[]; topPages: { path: string; count: number }[] } };
+type HomepageVideo = { url: string; videoId: string };
 type DailyTrafficPoint = { day: string; count: number };
 type CourseDraft = { title: string; slug: string; shortDescription: string; description: string; category: string; difficulty: string; estimatedMinutes: number; objectivesText: string; audience: string; thumbnailUrl: string };
 type ChapterDraft = { title: string; slug: string; description: string; order: number };
@@ -156,6 +157,8 @@ export default function AdminPage() {
   const [password, setPassword] = useState("");
   const [courses, setCourses] = useState<Course[]>([]);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [homepageVideoUrls, setHomepageVideoUrls] = useState<string[]>([]);
+  const [newHomepageVideoUrl, setNewHomepageVideoUrl] = useState("");
   const [selected, setSelected] = useState<Course | null>(null);
   const [courseDraft, setCourseDraft] = useState<CourseDraft>(blankCourse);
   const [courseEditor, setCourseEditor] = useState<"new" | "edit" | null>(null);
@@ -169,12 +172,14 @@ export default function AdminPage() {
   const [busy, setBusy] = useState(false);
 
   async function loadOverview() {
-    const [courseRows, stats] = await Promise.all([
+    const [courseRows, stats, playlist] = await Promise.all([
       request<Course[]>("/admin/courses"),
       request<Metrics>("/admin/dashboard"),
+      request<{ videos: HomepageVideo[] }>("/admin/homepage-videos"),
     ]);
     setCourses(courseRows);
     setMetrics(stats);
+    setHomepageVideoUrls(playlist.videos.map(video => video.url));
   }
   async function loadCourse(id: string) {
     const detail = await request<Course>(`/admin/courses/${id}`);
@@ -200,6 +205,15 @@ export default function AdminPage() {
   async function logout() {
     await request("/admin/auth/logout", { method: "POST" });
     setAdmin(null); setSelected(null); setCourses([]); setMetrics(null);
+  }
+  async function saveHomepageVideos() {
+    setBusy(true); setError(""); setNotice("");
+    try {
+      const result = await request<{ videos: HomepageVideo[] }>("/admin/homepage-videos", { method: "PUT", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ urls: homepageVideoUrls }) });
+      setHomepageVideoUrls(result.videos.map(video => video.url));
+      setNotice("Homepage video playlist saved. Changes will appear on the site shortly.");
+    } catch (e) { setError(e instanceof Error ? e.message : "Could not save the homepage playlist."); }
+    finally { setBusy(false); }
   }
   async function saveCourse(event: FormEvent) {
     event.preventDefault(); setBusy(true); setError(""); setNotice("");
@@ -330,6 +344,21 @@ export default function AdminPage() {
         {metrics && <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit,minmax(130px,1fr))", gap: 12, margin: "24px 0 40px" }}>
           {[["Courses", metrics.courses], ["Published", metrics.publishedCourses], ["Drafts", metrics.draftCourses], ["Chapters", metrics.chapters], ["Topics", metrics.topics], ["Links", metrics.resources]].map(([name, count]) => <div className="note" key={String(name)}><div className="muted">{name}</div><strong style={{ fontSize: 25 }}>{count}</strong></div>)}
         </div>}
+        <section className="note" style={{ margin: "-20px 0 36px" }}>
+          <div className="eyebrow">Homepage feature</div><h2 style={{ margin: "6px 0" }}>Featured YouTube playlist</h2>
+          <p className="muted">Add up to 3 HTTPS YouTube video links. They play in order in the homepage player and loop continuously. Leave the list empty to hide the player.</p>
+          <div style={{ display: "grid", gap: 12, marginTop: 18 }}>
+            {homepageVideoUrls.map((url, index) => <div key={index} style={{ ...actionRow, alignItems: "end" }}>
+              <label style={{ ...labelStyle, flex: "1 1 360px" }}>Video {index + 1}<input className="search" style={inputStyle} type="url" required value={url} onChange={event => setHomepageVideoUrls(current => current.map((item, itemIndex) => itemIndex === index ? event.target.value : item))} placeholder="https://youtu.be/..." /></label>
+              <button type="button" className="btn" onClick={() => setHomepageVideoUrls(current => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove video ${index + 1}`}>Remove</button>
+            </div>)}
+            {homepageVideoUrls.length < 3 && <div style={{ ...actionRow, alignItems: "end" }}>
+              <label style={{ ...labelStyle, flex: "1 1 360px" }}>Add video link<input className="search" style={inputStyle} type="url" value={newHomepageVideoUrl} onChange={event => setNewHomepageVideoUrl(event.target.value)} placeholder="https://youtu.be/..." /></label>
+              <button type="button" className="btn" disabled={!newHomepageVideoUrl.trim()} onClick={() => { setHomepageVideoUrls(current => [...current, newHomepageVideoUrl.trim()]); setNewHomepageVideoUrl(""); }}>Add video</button>
+            </div>}
+            <div><button className="btn btn-primary" disabled={busy} onClick={() => void saveHomepageVideos()}>{busy ? "Saving…" : "Save playlist"}</button><span className="muted" style={{ marginLeft: 12, fontSize: 13 }}>{homepageVideoUrls.length}/3 videos</span></div>
+          </div>
+        </section>
         {metrics && <section className="note traffic-dashboard" style={{ margin: "-20px 0 36px" }}>
           <div className="traffic-dashboard-heading"><div><div className="eyebrow">Audience</div><h2 style={{ margin: "4px 0 6px" }}>Site traffic</h2><p className="muted">A quick read on your learning community and what they explore.</p></div><span className="traffic-definition">Page visits count each visitor once per page, per day.</span></div>
           <div className="traffic-kpis">
