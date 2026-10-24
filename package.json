@@ -3,6 +3,7 @@
   "private": true,
   "scripts": {
     "dev": "concurrently -k \"npm:dev:web\" \"npm:dev:api\"",
+    "start": "npm run start:web",
     "dev:web": "next dev apps/web",
     "dev:api": "tsx watch apps/api/src/index.ts",
     "build": "npm run db:generate && npm run build:web && npm run build:api",
