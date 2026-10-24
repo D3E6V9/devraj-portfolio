@@ -1,7 +1,7 @@
 import "dotenv/config";
 import express from "express";
 import cors from "cors";
-import { createHmac, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHmac, randomUUID, scryptSync, timingSafeEqual } from "node:crypto";
 import type { RequestHandler } from "express";
 import { PrismaClient } from "@prisma/client";
 import { z } from "zod";
@@ -59,6 +59,21 @@ const courseFields = z.object({ title: z.string().min(2).max(120), slug: z.strin
 const chapterFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(5000).default(""), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
 const topicFields = z.object({ title: z.string().min(2).max(120), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), description: z.string().max(10000).default(""), objectives: z.array(z.string().max(250)).max(20).default([]), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
 const resourceFields = z.object({ title: z.string().min(2).max(160), description: z.string().max(3000).default(""), type: z.enum(["VIDEO", "ARTICLE", "LINK"]).default("LINK"), externalUrl: z.string().url().max(2000), videoProvider: z.string().max(40).optional().nullable(), videoId: z.string().max(200).optional().nullable(), durationSeconds: z.number().int().nonnegative().optional().nullable(), order: z.number().int().nonnegative().default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("PUBLISHED") });
+const pathwayStepFields = z.object({ title: z.string().min(2).max(120), focus: z.string().min(5).max(500), action: z.string().min(5).max(500), courseSearch: z.string().max(100).default("") });
+const pathwayFields = z.object({ title: z.string().min(2).max(100), slug: z.string().regex(/^[a-z0-9]+(?:-[a-z0-9]+)*$/), short: z.string().min(10).max(280), description: z.string().min(10).max(2000), outcome: z.string().min(5).max(300), color: z.enum(["mint", "violet", "blue", "lime"]).default("mint"), order: z.number().int().min(0).max(1000).default(0), status: z.enum(["DRAFT", "PUBLISHED"]).default("DRAFT"), steps: z.array(pathwayStepFields).min(1).max(30) });
+const pathwayRecordFields = pathwayFields.extend({ id: z.string().min(1) });
+type PathwayRecord = z.infer<typeof pathwayRecordFields>;
+async function readPathways(): Promise<PathwayRecord[]> {
+  const setting = await db.siteSetting.findUnique({ where: { key: "careerPathways" }, select: { value: true } });
+  try {
+    const rows: unknown = JSON.parse(setting?.value || "[]");
+    const parsed = z.array(pathwayRecordFields).safeParse(rows);
+    return parsed.success ? parsed.data : [];
+  } catch { return []; }
+}
+async function writePathways(rows: PathwayRecord[]) {
+  await db.siteSetting.upsert({ where: { key: "careerPathways" }, update: { value: JSON.stringify(rows) }, create: { key: "careerPathways", value: JSON.stringify(rows) } });
+}
 const visitorFields = z.object({ visitorId: z.string().uuid() });
 const utcDay = (date = new Date()) => new Date(Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate()));
 async function publishReady(id: string) {
@@ -87,6 +102,50 @@ api.put("/admin/homepage-videos", requireAdmin, async (req, res, next) => {
     const videos = input.urls.map(url => ({ url: safeHttpsUrl(url), videoId: youtubeVideoId(url) as string }));
     await db.siteSetting.upsert({ where: { key: "homepageVideos" }, update: { value: JSON.stringify(videos) }, create: { key: "homepageVideos", value: JSON.stringify(videos) } });
     res.json({ videos });
+  } catch (e) { next(e); }
+});
+api.get("/pathways", async (_req, res, next) => {
+  try { const rows = await readPathways(); res.json({ items: rows.filter(row => row.status === "PUBLISHED").sort((a, b) => a.order - b.order) }); }
+  catch (e) { next(e); }
+});
+api.get("/pathways/:slug", async (req, res, next) => {
+  try { const row = (await readPathways()).find(item => item.slug === String(req.params.slug) && item.status === "PUBLISHED"); if (!row) return res.status(404).json({ error: "Pathway not found" }); res.json(row); }
+  catch (e) { next(e); }
+});
+api.get("/admin/pathways", requireAdmin, async (_req, res, next) => {
+  try { res.json({ items: (await readPathways()).sort((a, b) => a.order - b.order) }); }
+  catch (e) { next(e); }
+});
+api.post("/admin/pathways", requireAdmin, async (req, res, next) => {
+  try {
+    const input = pathwayFields.parse(req.body);
+    const rows = await readPathways();
+    if (rows.some(row => row.slug === input.slug)) return res.status(409).json({ error: "That pathway address is already in use." });
+    const pathway = { ...input, id: randomUUID() };
+    await writePathways([...rows, pathway]);
+    res.status(201).json(pathway);
+  } catch (e) { next(e); }
+});
+api.patch("/admin/pathways/:id", requireAdmin, async (req, res, next) => {
+  try {
+    const input = pathwayFields.partial().parse(req.body);
+    const rows = await readPathways();
+    const index = rows.findIndex(row => row.id === String(req.params.id));
+    if (index < 0) return res.status(404).json({ error: "Pathway not found" });
+    if (input.slug && rows.some((row, rowIndex) => rowIndex !== index && row.slug === input.slug)) return res.status(409).json({ error: "That pathway address is already in use." });
+    const pathway = { ...rows[index], ...input };
+    rows[index] = pathway;
+    await writePathways(rows);
+    res.json(pathway);
+  } catch (e) { next(e); }
+});
+api.delete("/admin/pathways/:id", requireAdmin, async (req, res, next) => {
+  try {
+    const rows = await readPathways();
+    const remaining = rows.filter(row => row.id !== String(req.params.id));
+    if (remaining.length === rows.length) return res.status(404).json({ error: "Pathway not found" });
+    await writePathways(remaining);
+    res.status(204).end();
   } catch (e) { next(e); }
 });
 api.post("/admin/auth/login", async (req, res, next) => {

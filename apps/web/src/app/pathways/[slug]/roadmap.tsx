@@ -3,10 +3,9 @@
 import { useState } from "react";
 import Link from "next/link";
 import { ArrowLeft, ArrowUpRight, Check, ChevronDown, Compass, Route, Sparkles } from "lucide-react";
-import type { Course } from "@/lib/api";
-import type { Pathway } from "@/lib/pathways";
+import type { CareerPathway, Course } from "@/lib/api";
 
-export function Roadmap({ pathway, courses }: { pathway: Pathway; courses: Course[] }) {
+export function Roadmap({ pathway, courses }: { pathway: CareerPathway; courses: Course[] }) {
   const [openStep, setOpenStep] = useState<number | null>(null);
   return <>
     <header className="nav-shell"><div className="wrap nav"><Link className="brand" href="/">Up<b>Shift</b></Link><nav className="navlinks"><Link href="/courses">Explore courses</Link><Link href="/pathways">All pathways</Link></nav></div></header>

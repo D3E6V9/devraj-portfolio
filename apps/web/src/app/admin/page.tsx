@@ -3,6 +3,7 @@
 import { FormEvent, InputHTMLAttributes, useEffect, useState } from "react";
 import Link from "next/link";
 import mammoth from "mammoth";
+import { PathwaysManager } from "./pathways-manager";
 
 const api = "/api/v1";
 type Status = "DRAFT" | "PUBLISHED";
@@ -359,7 +360,8 @@ export default function AdminPage() {
             <div><button className="btn btn-primary" disabled={busy} onClick={() => void saveHomepageVideos()}>{busy ? "Saving…" : "Save playlist"}</button><span className="muted" style={{ marginLeft: 12, fontSize: 13 }}>{homepageVideoUrls.length}/3 videos</span></div>
           </div>
         </section>
-        {metrics && <section className="note traffic-dashboard" style={{ margin: "-20px 0 36px" }}>
+        <PathwaysManager />
+        {metrics && <section className="note traffic-dashboard" style={{ margin: "20px 0 36px" }}>
           <div className="traffic-dashboard-heading"><div><div className="eyebrow">Audience</div><h2 style={{ margin: "4px 0 6px" }}>Site traffic</h2><p className="muted">A quick read on your learning community and what they explore.</p></div><span className="traffic-definition">Page visits count each visitor once per page, per day.</span></div>
           <div className="traffic-kpis">
             {[ ["Today", metrics.traffic.todayPageViews], ["Last 7 days", metrics.traffic.last7Days], ["All time", metrics.traffic.totalPageViews] ].map(([label, count], index) => <div className={`traffic-kpi traffic-kpi-${index + 1}`} key={String(label)}><span>{label}</span><strong>{Number(count).toLocaleString()}</strong><small>page visits</small></div>)}

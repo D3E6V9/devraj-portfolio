@@ -1,6 +1,7 @@
 import "dotenv/config";
 import { PrismaClient } from "@prisma/client";
 import { randomBytes, scryptSync } from "node:crypto";
+import { pathways } from "../apps/web/src/lib/pathways";
 const prisma = new PrismaClient();
 
 async function main() {
@@ -8,6 +9,7 @@ async function main() {
   // Seed no invented or publicly visible learning content.
   await prisma.siteSetting.upsert({ where: { key: "youtubeChannelUrl" }, update: {}, create: { key: "youtubeChannelUrl", value: process.env.YOUTUBE_CHANNEL_URL ?? "" } });
   await prisma.siteSetting.upsert({ where: { key: "creatorBio" }, update: {}, create: { key: "creatorBio", value: "" } });
+  await prisma.siteSetting.upsert({ where: { key: "careerPathways" }, update: {}, create: { key: "careerPathways", value: JSON.stringify(pathways.map((pathway, order) => ({ ...pathway, id: pathway.slug, order, status: "PUBLISHED" }))) } });
   const email = process.env.ADMIN_BOOTSTRAP_EMAIL?.trim().toLowerCase();
   const password = process.env.ADMIN_BOOTSTRAP_PASSWORD;
   if (email && password) {
